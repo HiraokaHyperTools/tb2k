@@ -175,7 +175,7 @@ type
     procedure EndUpdate;
     procedure CreateWrappersForAllControls;
     procedure GetChildren(Proc: TGetChildProc; Root: TComponent); override;
-    procedure GetTabOrderList(List: TList); override;
+    procedure GetTabOrderList(List: TFPList); override;
     procedure InitiateAction; override;
     function IsShortCut(var Message: TWMKey): Boolean;
     function KeyboardOpen(Key: Char; RequirePrimaryAccel: Boolean): Boolean;
@@ -320,7 +320,7 @@ type
 procedure HookProc(Code: THookProcCode; Wnd: HWND; WParam: WPARAM;
   LParam: LPARAM);
 var
-  Msg: {$IFNDEF CLR} PMsg {$ELSE} TMsg {$ENDIF};
+  Msg: {$IFNDEF CLR} Windows.PMsg {$ELSE} TMsg {$ENDIF};
   MainForm: TForm;
 begin
   { Work around an annoying Windows or VCL bug. If you close all MDI child
@@ -337,7 +337,7 @@ begin
     {$ELSE}
     Msg := TMsg(Marshal.PtrToStructure(IntPtr(LParam), TypeOf(TMsg)));
     {$ENDIF}
-    if (Msg.message = WM_SYSCHAR) and (Msg.hwnd <> 0) then begin
+    if (Msg^.message = WM_SYSCHAR) and (Msg^.hwnd <> 0) then begin
       { Note: On Windows NT/2000/XP, even though we install the hook using
         SetWindowsHookExW, Msg.wParam may either be an ANSI character or a
         Unicode character, due to an apparent bug on these platforms. It is
@@ -351,9 +351,9 @@ begin
         are the same between ANSI and Unicode, such as '-'. }
       MainForm := Application.MainForm;
       if Assigned(MainForm) and MainForm.HandleAllocated and (GetCapture = 0) and
-         ((Msg.hwnd = MainForm.ClientHandle) or
-          ((Msg.wParam = Ord('-')) and (MainForm.ClientHandle <> 0) and
-           IsChild(MainForm.ClientHandle, Msg.hwnd))) then begin
+         ((Msg^.hwnd = MainForm.ClientHandle) or
+          ((Msg^.wParam = Ord('-')) and (MainForm.ClientHandle <> 0) and
+           IsChild(MainForm.ClientHandle, Msg^.hwnd))) then begin
         { Redirect the message to the main form.
           Note: Unfortunately, due to a bug in Windows NT 4.0 (and not
           2000/XP/9x/Me), modifications to the message don't take effect if
@@ -363,7 +363,7 @@ begin
           it returns.) I don't know of any clean workaround, other than to
           ensure other WH_GETMESSAGE hooks are installed *before*
           Toolbar2000's. }
-        Msg.hwnd := MainForm.Handle;
+        Msg^.hwnd := MainForm.Handle;
         {$IFDEF CLR}
         Marshal.StructureToPtr(TObject(Msg), IntPtr(LParam), False);
         {$ENDIF}
@@ -567,7 +567,7 @@ begin
     needed for Delphi 4 and earlier since Delphi 5 calls Destroying in
     TComponent.BeforeDestruction }
   Destroying;
-  UninstallHookProc(Self, HookProc);
+  UninstallHookProc(Self, @HookProc);
   UninstallMainWindowHook;
   FreeAndNil(FView);
   FreeAndNil(FChevronItem);
@@ -663,7 +663,6 @@ begin
   { Synchronize FView.BackgroundColor with the new color }
   if Assigned(FView) then
     FView.BackgroundColor := Color;
-  inherited;
 end;
 
 function TTBCustomToolbar.CreateWrapper(Index: Integer;
@@ -795,7 +794,7 @@ procedure TTBCustomToolbar.WMSetCursor(var Message: TWMSetCursor);
 var
   P: TPoint;
   Viewer: TTBItemViewer;
-  Cursor: HCURSOR;
+  ACursor: HCURSOR;
 begin
   if not(csDesigning in ComponentState) and
      (Message.CursorWnd = WindowHandle) and
@@ -808,18 +807,17 @@ begin
     P := ScreenToClient(P);
     Viewer := FView.ViewerFromPoint(P);
     if Assigned(Viewer) then begin
-      Cursor := 0;
+      ACursor := 0;
       Dec(P.X, Viewer.BoundsRect.Left);
       Dec(P.Y, Viewer.BoundsRect.Top);
-      TTBItemViewerAccess(Viewer).GetCursor(P, Cursor);
-      if Cursor <> 0 then begin
-        SetCursor(Cursor);
+      TTBItemViewerAccess(Viewer).GetCursor(P, ACursor);
+      if ACursor <> 0 then begin
+        SetCursor(ACursor);
         Message.Result := 1;
         Exit;
       end;
     end;
   end;
-  inherited;
 end;
 
 procedure TTBCustomToolbar.WMSysCommand(var Message: TWMSysCommand);
@@ -925,7 +923,6 @@ end;
 procedure TTBCustomToolbar.CMMouseLeave(var Message: TMessage);
 begin
   CancelHover;
-  inherited;
 end;
 
 {$IFDEF JR_D5}
@@ -998,7 +995,6 @@ procedure TTBCustomToolbar.WMNCMouseMove(var Message: TWMNCMouseMove);
 begin
   Hint := '';
   CancelHover;
-  inherited;
 end;
 
 function TTBCustomToolbar.KeyboardOpen(Key: Char;
@@ -1152,9 +1148,9 @@ begin
       ProcessShortCuts := Value;
     end;
     if Value and not(csDesigning in ComponentState) then
-      InstallHookProc(Self, HookProc, [hpGetMessage])
+      InstallHookProc(Self, @HookProc, [hpGetMessage])
     else
-      UninstallHookProc(Self, HookProc);
+      UninstallHookProc(Self, @HookProc);
     SetMainWindowHook;
   end;
 end;
@@ -1595,7 +1591,7 @@ begin
   FView.EndUpdate;
 end;
 
-procedure TTBCustomToolbar.GetTabOrderList(List: TList);
+procedure TTBCustomToolbar.GetTabOrderList(List: TFPList);
 var
   CtlList: TList;
   I, J: Integer;

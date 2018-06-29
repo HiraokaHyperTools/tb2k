@@ -40,6 +40,10 @@ const
 type
   TTBAnimationDirection = set of (tbadLeft, tbadRight, tbadDown, tbadUp);
 
+  TUpdateLayeredWindowProc = function(Handle: HWND; hdcDest: HDC;
+    pptDst: PPoint; _psize: PSize; hdcSrc: HDC; pptSrc: PPoint;
+    crKey: COLORREF; var pblend: TBLENDFUNCTION; dwFlags: DWORD): BOOL; stdcall;
+
 procedure TBStartAnimation(const AWnd: HWND; const ABlend: Boolean;
   const ADirection: TTBAnimationDirection);
 procedure TBUpdateAnimation;
@@ -90,9 +94,7 @@ type
 
 {$IFNDEF CLR}
 var
-  UpdateLayeredWindowProc: function(Handle: HWND; hdcDest: HDC;
-    pptDst: PPoint; _psize: PSize; hdcSrc: HDC; pptSrc: PPoint;
-    crKey: COLORREF; var pblend: TBLENDFUNCTION; dwFlags: DWORD): BOOL; stdcall;
+  UpdateLayeredWindowProc: TUpdateLayeredWindowProc;
 {$ELSE}
 { We can't use Borland.Vcl.Windows' UpdateLayeredWindow because the "pblend"
   parameter is misdeclared (see QC #25130) }
@@ -315,8 +317,8 @@ end;
 
 initialization
   {$IFNDEF CLR}
-  UpdateLayeredWindowProc := GetProcAddress(GetModuleHandle(user32),
-    'UpdateLayeredWindow');
+  UpdateLayeredWindowProc := TUpdateLayeredWindowProc(GetProcAddress(GetModuleHandle(user32),
+    'UpdateLayeredWindow'));
   {$ENDIF}
 finalization
   FinalizeAnimation;

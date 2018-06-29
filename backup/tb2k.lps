@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="10"/>
+    <BuildModes Active="Default"/>
+    <Units Count="36">
+      <Unit0>
+        <Filename Value="tb2k.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="15" Y="17"/>
+        <UsageCount Value="27"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="Source\TB2Acc.pas"/>
+        <EditorIndex Value="14"/>
+        <TopLine Value="28"/>
+        <CursorPos X="22" Y="39"/>
+        <UsageCount Value="22"/>
+        <Loaded Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="Source\TB2Anim.pas"/>
+        <EditorIndex Value="4"/>
+        <TopLine Value="32"/>
+        <CursorPos X="81" Y="45"/>
+        <UsageCount Value="23"/>
+        <Loaded Value="True"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="Source\TB2Common.pas"/>
+        <TopLine Value="1615"/>
+        <CursorPos X="8" Y="1622"/>
+        <UsageCount Value="23"/>
+        <Loaded Value="True"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="Source\TB2Consts.pas"/>
+        <EditorIndex Value="3"/>
+        <UsageCount Value="22"/>
+        <Loaded Value="True"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="Source\TB2Dock.pas"/>
+        <EditorIndex Value="7"/>
+        <TopLine Value="344"/>
+        <CursorPos X="15" Y="353"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="Source\TB2ExtItems.pas"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="829"/>
+        <CursorPos X="33" Y="838"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="Source\TB2Hook.pas"/>
+        <EditorIndex Value="11"/>
+        <TopLine Value="323"/>
+        <CursorPos X="31" Y="341"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="Source\TB2Item.pas"/>
+        <EditorIndex Value="5"/>
+        <TopLine Value="353"/>
+        <CursorPos X="14" Y="362"/>
+        <UsageCount Value="23"/>
+        <Loaded Value="True"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="Source\TB2MDI.pas"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="20"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="Source\TB2MRU.pas"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="20"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="1142"/>
+        <CursorPos X="32" Y="1153"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="Source\TB2ToolWindow.pas"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="20"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="Source\TB2Version.pas"/>
+        <EditorIndex Value="25"/>
+        <TopLine Value="25"/>
+        <CursorPos X="7" Y="30"/>
+        <UsageCount Value="23"/>
+        <Loaded Value="True"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="Source\TB2Ver.inc"/>
+        <EditorIndex Value="26"/>
+        <UsageCount Value="13"/>
+        <Loaded Value="True"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\win\wininc\func.inc"/>
+        <EditorIndex Value="17"/>
+        <TopLine Value="658"/>
+        <CursorPos X="127" Y="668"/>
+        <UsageCount Value="13"/>
+        <Loaded Value="True"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\win\wininc\base.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="641"/>
+        <CursorPos X="6" Y="652"/>
+        <UsageCount Value="10"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\objpas\sysutils\sysutilh.inc"/>
+        <EditorIndex Value="24"/>
+        <TopLine Value="315"/>
+        <CursorPos X="12" Y="326"/>
+        <UsageCount Value="13"/>
+        <Loaded Value="True"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\win\wininc\redef.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="601"/>
+        <CursorPos X="10" Y="612"/>
+        <UsageCount Value="10"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\win\wininc\struct.inc"/>
+        <EditorIndex Value="23"/>
+        <TopLine Value="5172"/>
+        <CursorPos X="6" Y="5183"/>
+        <UsageCount Value="13"/>
+        <Loaded Value="True"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="C:\lazarus\lcl\lcltype.pp"/>
+        <UnitName Value="LCLType"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="2471"/>
+        <CursorPos X="3" Y="2482"/>
+        <UsageCount Value="11"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\win\wininc\ascdef.inc"/>
+        <EditorIndex Value="22"/>
+        <TopLine Value="298"/>
+        <CursorPos X="10" Y="309"/>
+        <UsageCount Value="13"/>
+        <Loaded Value="True"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="C:\lazarus\lcl\menus.pp"/>
+        <UnitName Value="Menus"/>
+        <EditorIndex Value="13"/>
+        <TopLine Value="340"/>
+        <CursorPos X="64" Y="349"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\objpas\classes\classesh.inc"/>
+        <EditorIndex Value="19"/>
+        <TopLine Value="18"/>
+        <CursorPos X="4" Y="28"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="C:\lazarus\lcl\lmessages.pp"/>
+        <UnitName Value="LMessages"/>
+        <EditorIndex Value="21"/>
+        <TopLine Value="695"/>
+        <CursorPos X="3" Y="705"/>
+        <UsageCount Value="13"/>
+        <Loaded Value="True"/>
+      </Unit24>
+      <Unit25>
+        <Filename Value="C:\lazarus\lcl\lclclasses.pp"/>
+        <UnitName Value="LCLClasses"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="34"/>
+        <CursorPos X="3" Y="42"/>
+        <UsageCount Value="10"/>
+      </Unit25>
+      <Unit26>
+        <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\inc\typshrdh.inc"/>
+        <EditorIndex Value="16"/>
+        <TopLine Value="126"/>
+        <CursorPos X="17" Y="135"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit26>
+      <Unit27>
+        <Filename Value="C:\lazarus\lcl\controls.pp"/>
+        <UnitName Value="Controls"/>
+        <EditorIndex Value="18"/>
+        <TopLine Value="1310"/>
+        <CursorPos X="15" Y="1318"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit27>
+      <Unit28>
+        <Filename Value="Source\compat.pp"/>
+        <UnitName Value="Compat"/>
+        <EditorIndex Value="15"/>
+        <CursorPos Y="13"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit28>
+      <Unit29>
+        <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\win64\classes.pp"/>
+        <UnitName Value="Classes"/>
+        <EditorIndex Value="12"/>
+        <TopLine Value="31"/>
+        <CursorPos X="10" Y="41"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit29>
+      <Unit30>
+        <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\win\wininc\messages.inc"/>
+        <EditorIndex Value="8"/>
+        <TopLine Value="1209"/>
+        <CursorPos X="5" Y="1219"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit30>
+      <Unit31>
+        <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\inc\objpash.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="194"/>
+        <CursorPos X="21" Y="203"/>
+        <UsageCount Value="10"/>
+      </Unit31>
+      <Unit32>
+        <Filename Value="C:\lazarus\lcl\imglist.pp"/>
+        <UnitName Value="ImgList"/>
+        <EditorIndex Value="6"/>
+        <TopLine Value="65"/>
+        <CursorPos X="14" Y="75"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit32>
+      <Unit33>
+        <Filename Value="C:\lazarus\fpc\3.0.4\source\rtl\objpas\types.pp"/>
+        <UnitName Value="Types"/>
+        <EditorIndex Value="20"/>
+        <TopLine Value="72"/>
+        <CursorPos X="3" Y="83"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit33>
+      <Unit34>
+        <Filename Value="C:\lazarus\lcl\forms.pp"/>
+        <UnitName Value="Forms"/>
+        <EditorIndex Value="10"/>
+        <TopLine Value="143"/>
+        <CursorPos X="3" Y="154"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit34>
+      <Unit35>
+        <Filename Value="C:\lazarus\lcl\graphics.pp"/>
+        <UnitName Value="Graphics"/>
+        <EditorIndex Value="9"/>
+        <TopLine Value="1454"/>
+        <CursorPos X="3" Y="1432"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit35>
+    </Units>
+    <JumpHistory Count="30" HistoryIndex="29">
+      <Position1>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="814" Column="49" TopLine="799"/>
+      </Position1>
+      <Position2>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="815" Column="11" TopLine="800"/>
+      </Position2>
+      <Position3>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="816" Column="20" TopLine="801"/>
+      </Position3>
+      <Position4>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="666" Column="12" TopLine="657"/>
+      </Position4>
+      <Position5>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="822" Column="12" TopLine="790"/>
+      </Position5>
+      <Position6>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="132" Column="15" TopLine="123"/>
+      </Position6>
+      <Position7>
+        <Filename Value="Source\TB2Dock.pas"/>
+        <Caret Line="373" Column="85" TopLine="366"/>
+      </Position7>
+      <Position8>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="132" Column="15" TopLine="123"/>
+      </Position8>
+      <Position9>
+        <Filename Value="Source\TB2Dock.pas"/>
+        <Caret Line="373" Column="15" TopLine="364"/>
+      </Position9>
+      <Position10>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="132" Column="15" TopLine="123"/>
+      </Position10>
+      <Position11>
+        <Filename Value="Source\TB2Dock.pas"/>
+        <Caret Line="373" Column="76" TopLine="364"/>
+      </Position11>
+      <Position12>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="666" Column="12" TopLine="656"/>
+      </Position12>
+      <Position13>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="822" Column="12" TopLine="812"/>
+      </Position13>
+      <Position14>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="928" Column="12" TopLine="919"/>
+      </Position14>
+      <Position15>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="662" Column="33" TopLine="654"/>
+      </Position15>
+      <Position16>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="113" Column="15" TopLine="105"/>
+      </Position16>
+      <Position17>
+        <Filename Value="Source\TB2Dock.pas"/>
+        <Caret Line="352" Column="23" TopLine="347"/>
+      </Position17>
+      <Position18>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="666" Column="12" TopLine="656"/>
+      </Position18>
+      <Position19>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="21" TopLine="21"/>
+      </Position19>
+      <Position20>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="666" TopLine="656"/>
+      </Position20>
+      <Position21>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="821" Column="12" TopLine="789"/>
+      </Position21>
+      <Position22>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="132" Column="15" TopLine="124"/>
+      </Position22>
+      <Position23>
+        <Filename Value="Source\TB2Dock.pas"/>
+        <Caret Line="373" Column="22" TopLine="366"/>
+      </Position23>
+      <Position24>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="821" TopLine="812"/>
+      </Position24>
+      <Position25>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="926" Column="12" TopLine="917"/>
+      </Position25>
+      <Position26>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="122" Column="15" TopLine="114"/>
+      </Position26>
+      <Position27>
+        <Filename Value="Source\TB2Dock.pas"/>
+        <Caret Line="353" Column="15" TopLine="344"/>
+      </Position27>
+      <Position28>
+        <Filename Value="C:\lazarus\lcl\controls.pp"/>
+        <Caret Line="1318" Column="15" TopLine="1310"/>
+      </Position28>
+      <Position29>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="926" TopLine="917"/>
+      </Position29>
+      <Position30>
+        <Filename Value="Source\TB2Toolbar.pas"/>
+        <Caret Line="998" TopLine="989"/>
+      </Position30>
+    </JumpHistory>
+  </ProjectSession>
+</CONFIG>

@@ -37,7 +37,8 @@ interface
 {$I TB2Ver.inc}
 
 uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, IniFiles;
+  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, IniFiles,
+  LCLType, LCLStrConsts, contnrs;
 
 type
   TTBCustomForm = {$IFDEF JR_D3} TCustomForm {$ELSE} TForm {$ENDIF};
@@ -212,7 +213,7 @@ type
     procedure WMNCLButtonDblClk(var Message: TWMNCLButtonDblClk); message WM_NCLBUTTONDBLCLK;
     procedure WMNCLButtonDown(var Message: TWMNCLButtonDown); message WM_NCLBUTTONDOWN;
     procedure WMNCPaint(var Message: TMessage); message WM_NCPAINT;
-    procedure WMNCRButtonUp(var Message: TWMNCRButtonUp); message WM_NCRBUTTONUP;
+    procedure WMNCRButtonUp(var Message: TWMNCLButtonUp); message WM_NCRBUTTONUP;
     procedure WMPrint(var Message: TMessage); message WM_PRINT;
     procedure WMPrintClient(var Message: {$IFNDEF CLR} TMessage {$ELSE} TWMPrintClient {$ENDIF}); message WM_PRINTCLIENT;
   protected
@@ -295,7 +296,7 @@ type
     FArrangeNeeded, FMoved: Boolean;
     FInactiveCaption: Boolean; { True when the caption of the toolbar is currently the inactive color }
     FFloatingPosition: TPoint;
-    FDockForms: TList;
+    FDockForms: TObjectList;
     FSavedAtRunTime: Boolean;
     //FNonClientWidth, FNonClientHeight: Integer;
     FDragMode, FDragSplitting, FDragCanSplit: Boolean;
@@ -366,7 +367,7 @@ type
     procedure WMNCLButtonDblClk(var Message: TWMNCLButtonDblClk); message WM_NCLBUTTONDBLCLK;
     procedure WMNCLButtonDown(var Message: TWMNCLButtonDown); message WM_NCLBUTTONDOWN;
     procedure WMNCPaint(var Message: TMessage); message WM_NCPAINT;
-    procedure WMNCRButtonUp(var Message: TWMNCRButtonUp); message WM_NCRBUTTONUP;
+    procedure WMNCRButtonUp(var Message: TWMNCLButtonUp); message WM_NCRBUTTONUP;
     procedure WMPrint(var Message: TMessage); message WM_PRINT;
     procedure WMPrintClient(var Message: {$IFNDEF CLR} TMessage {$ELSE} TWMPrintClient {$ENDIF}); message WM_PRINTCLIENT;
     procedure WMSetCursor(var Message: TWMSetCursor); message WM_SETCURSOR;
@@ -418,7 +419,7 @@ type
     procedure Loaded; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
-    function PaletteChanged(Foreground: Boolean): Boolean; override;
+    function PaletteChanged(Foreground: Boolean): Boolean;
     procedure SetParent(AParent: TWinControl); override;
 
     { Methods accessible to descendants }
@@ -561,7 +562,7 @@ implementation
 
 uses
   {$IFDEF CLR} Types, System.Runtime.InteropServices, {$ENDIF}
-  Registry, Consts, Menus,
+  Registry, Menus,
   TB2Common, TB2Hook, TB2Consts;
 
 type
@@ -601,7 +602,7 @@ const
   rvFloatTop = 'FloatTop';
 
 threadvar
-  FloatingToolWindows: TList;
+  FloatingToolWindows: TObjectList;
 
 
 { Misc. functions }
@@ -662,7 +663,7 @@ begin
   { ^ for compatibility with ActiveX controls, that code is used instead of
     GetParentForm because it returns nil unless the form is the *topmost*
     parent }
-  if Result is TTBFloatingWindowParent then
+  if TControl(Result) is TTBFloatingWindowParent then
     Result := TTBFloatingWindowParent(Result).ParentForm;
 end;
 
@@ -671,7 +672,7 @@ begin
   Result := TBGetToolWindowParentForm(ToolWindow);
   if Result = nil then
     raise EInvalidOperation.{$IFDEF JR_D3}CreateFmt{$ELSE}CreateResFmt{$ENDIF}
-      (SParentRequired, [ToolWindow.Name]);
+      (@SParentRequired, [ToolWindow.Name]);
 end;
 
 procedure SetWindowOwner(const Wnd, NewOwnerWnd: HWND);
@@ -709,8 +710,8 @@ begin
             if (ToolWindow.FFloatingMode = fmOnTopOfParentForm) and ToolWindow.HandleAllocated then begin
               { Call UpdateVisibility if parent form's visibility has
                 changed, or if it has been minimized or restored }
-              if ((WindowPos.flags and (SWP_SHOWWINDOW or SWP_HIDEWINDOW) <> 0) or
-                  (WindowPos.flags and SWP_FRAMECHANGED <> 0)) then begin
+              if ((WindowPos^.flags and (SWP_SHOWWINDOW or SWP_HIDEWINDOW) <> 0) or
+                  (WindowPos^.flags and SWP_FRAMECHANGED <> 0)) then begin
                 Form := TBGetToolWindowParentForm(ToolWindow);
                 if Assigned(Form) and Form.HandleAllocated and ((Wnd = Form.Handle) or IsChild(Wnd, Form.Handle)) then
                   ToolWindow.UpdateVisibility;
@@ -728,7 +729,7 @@ begin
                 the tool window's handle. }
               if Assigned(Parent) and Parent.HandleAllocated and
                  (HWND(GetWindowLong(Parent.Handle, GWL_HWNDPARENT)) = Wnd) then
-                SetWindowOwner(Parent.Handle, Application.Handle);
+                SetWindowOwner(Parent.Handle, 0);
                 { ^ Restore GWL_HWNDPARENT back to Application.Handle }
           end;
       end;
@@ -758,7 +759,7 @@ begin
   {$IFNDEF CLR}
   with PFindWindowData(Param)^ do
   {$ENDIF}
-    if (Wnd <> TaskActiveWindow) and (Wnd <> Application.Handle) and
+    if (Wnd <> TaskActiveWindow) and (Wnd <> 0) and
        IsWindowVisible(Wnd) and IsWindowEnabled(Wnd) then begin
       if GetWindowLong(Wnd, GWL_EXSTYLE) and WS_EX_TOPMOST = 0 then begin
         if TaskFirstWindow = 0 then TaskFirstWindow := Wnd;
@@ -835,7 +836,7 @@ function CloseButtonLoop(const Wnd: HWND; const ButtonRect: TRect;
     Result := PtInRect(ButtonRect, P);
   end;
 var
-  Msg: TMsg;
+  Msg: Windows.TMsg;
 begin
   Result := False;
 
@@ -916,7 +917,7 @@ end;
 destructor TTBDock.Destroy;
 begin
   if Assigned(FBackground) then
-    FBackground.UnregisterChanges(BackgroundChanged);
+    FBackground.UnregisterChanges(@BackgroundChanged);
   inherited;
   DockVisibleList.Free;
   DockList.Free;
@@ -1218,7 +1219,7 @@ begin
     for I := 0 to NewDockList.Count-1 do
       NewDockList[I] := DockList[I];
     I := IndexOfDraggingToolbar(NewDockList);
-    NewDockList.Sort(CompareDockRowPos);
+    NewDockList.Sort(@CompareDockRowPos);
     DragIndex := IndexOfDraggingToolbar(NewDockList);
     if (I <> -1) and TTBCustomDockableWindow(NewDockList[DragIndex]).FDragSplitting then begin
       { When splitting, don't allow the toolbar being dragged to change
@@ -1226,7 +1227,7 @@ begin
       NewDockList.Move(DragIndex, I);
       DragIndex := I;
     end;
-    DockVisibleList.Sort(CompareDockRowPos);
+    DockVisibleList.Sort(@CompareDockRowPos);
     { Find highest row number }
     HighestRow := GetHighestRow(False);
 
@@ -1783,7 +1784,7 @@ begin
   { note to self: non-client size is stored in FNonClientWidth &
     FNonClientHeight }
   {$IFNDEF CLR}
-  ApplyToRect(Message.CalcSize_Params.rgrc[0]);
+  ApplyToRect(Message.CalcSize_Params^.rgrc[0]);
   {$ELSE}
   Params := Message.CalcSize_Params;
   ApplyToRect(Params.rgrc0);
@@ -1881,13 +1882,13 @@ end;
 
 procedure TTBDock.WMPrint(var Message: TMessage);
 begin
-  HandleWMPrint(Handle, Message, DockNCPaintProc, Self);
+  HandleWMPrint(Handle, Message, @DockNCPaintProc, Self);
 end;
 
 procedure TTBDock.WMPrintClient(var Message:
   {$IFNDEF CLR} TMessage {$ELSE} TWMPrintClient {$ENDIF});
 begin
-  HandleWMPrintClient(PaintHandler, Message);
+  HandleWMPrintClient(@PaintHandler, Message);
 end;
 
 procedure TTBDock.CMSysColorChange(var Message: TMessage);
@@ -1984,11 +1985,11 @@ procedure TTBDock.SetBackground(Value: TTBBasicBackground);
 begin
   if FBackground <> Value then begin
     if Assigned(FBackground) then
-      FBackground.UnregisterChanges(BackgroundChanged);
+      FBackground.UnregisterChanges(@BackgroundChanged);
     FBackground := Value;
     if Assigned(Value) then begin
       Value.FreeNotification(Self);
-      Value.RegisterChanges(BackgroundChanged);
+      Value.RegisterChanges(@BackgroundChanged);
     end;
     InvalidateBackgrounds;
   end;
@@ -2216,7 +2217,7 @@ begin
   { Doesn't call inherited since it overrides the normal NC sizes }
   Message.Result := 0;
   {$IFNDEF CLR}
-  ApplyToRect(Message.CalcSize_Params.rgrc[0]);
+  ApplyToRect(Message.CalcSize_Params^.rgrc[0]);
   {$ELSE}
   Params := Message.CalcSize_Params;
   ApplyToRect(Params.rgrc0);
@@ -2238,13 +2239,13 @@ end;
 
 procedure TTBFloatingWindowParent.WMPrint(var Message: TMessage);
 begin
-  HandleWMPrint(Handle, Message, FloatingWindowParentNCPaintProc, Self);
+  HandleWMPrint(Handle, Message, @FloatingWindowParentNCPaintProc, Self);
 end;
 
 procedure TTBFloatingWindowParent.WMPrintClient(var Message:
   {$IFNDEF CLR} TMessage {$ELSE} TWMPrintClient {$ENDIF});
 begin
-  HandleWMPrintClient(PaintHandler, Message);
+  HandleWMPrintClient(@PaintHandler, Message);
 end;
 
 procedure TTBFloatingWindowParent.WMNCHitTest(var Message: TWMNCHitTest);
@@ -2332,7 +2333,7 @@ begin
         GetWindowRect(Handle, R);
         BR := GetCloseButtonRect(True);
         OffsetRect(BR, R.Left, R.Top);
-        if CloseButtonLoop(Handle, BR, SetCloseButtonState) then
+        if CloseButtonLoop(Handle, BR, @SetCloseButtonState) then
           FDockableWindow.Close;
       end;
   else
@@ -2346,7 +2347,7 @@ begin
     FDockableWindow.DoubleClick;
 end;
 
-procedure TTBFloatingWindowParent.WMNCRButtonUp(var Message: TWMNCRButtonUp);
+procedure TTBFloatingWindowParent.WMNCRButtonUp(var Message: TWMNCLButtonUp);
 begin
   FDockableWindow.ShowNCContextMenu(Message.XCursor, Message.YCursor);
 end;
@@ -2369,17 +2370,17 @@ end;
 
 procedure TTBFloatingWindowParent.WMActivate(var Message: TWMActivate);
 var
-  ParentForm: TTBCustomForm;
+  AParentForm: TTBCustomForm;
 begin
   if csDesigning in ComponentState then begin
     inherited;
     Exit;
   end;
 
-  ParentForm := GetMDIParent(TBGetToolWindowParentForm(FDockableWindow));
+  AParentForm := GetMDIParent(TBGetToolWindowParentForm(FDockableWindow));
 
-  if Assigned(ParentForm) and ParentForm.HandleAllocated then
-    SendMessage(ParentForm.Handle, WM_NCACTIVATE, Ord(Message.Active <> WA_INACTIVE), 0);
+  if Assigned(AParentForm) and ParentForm.HandleAllocated then
+    SendMessage(AParentForm.Handle, WM_NCACTIVATE, Ord(Message.Active <> WA_INACTIVE), 0);
 
   if Message.Active <> WA_INACTIVE then begin
     { This works around a "gotcha" in TCustomForm.CMShowingChanged. When a form
@@ -2408,7 +2409,7 @@ end;
 
 procedure TTBFloatingWindowParent.WMMouseActivate(var Message: TWMMouseActivate);
 var
-  ParentForm, MDIParentForm: TTBCustomForm;
+  AParentForm, MDIParentForm: TTBCustomForm;
 begin
   if csDesigning in ComponentState then begin
     inherited;
@@ -2424,7 +2425,7 @@ begin
     SWP_NOACTIVATE or SWP_NOMOVE or SWP_NOSIZE);
 
   { Since it is returning MA_NOACTIVATE, activate the form instead. }
-  ParentForm := TBGetToolWindowParentForm(FDockableWindow);
+  AParentForm := TBGetToolWindowParentForm(FDockableWindow);
   MDIParentForm := GetMDIParent(ParentForm);
   if (FDockableWindow.FFloatingMode = fmOnTopOfParentForm) and
      FDockableWindow.FActivateParent and
@@ -2569,7 +2570,7 @@ procedure TTBFloatingWindowParent.CallRecreateWnd;
   "Only methods of descendant types may access protected member
   [Borland.Vcl]TWinControl.RecreateWnd across assembly boundaries" }
 begin
-  RecreateWnd;
+  RecreateWnd(self);
 end;
 
 
@@ -2600,7 +2601,7 @@ begin
   Color := clBtnFace;
 
   if not(csDesigning in ComponentState) then
-    InstallHookProc(Self, ToolbarHookProc, [hpSendActivate, hpSendActivateApp,
+    InstallHookProc(Self, @ToolbarHookProc, [hpSendActivate, hpSendActivateApp,
       hpSendWindowPosChanged, hpPreDestroy]);
   InitTrackMouseEvent;
 end;
@@ -2610,7 +2611,7 @@ begin
   inherited;
   FreeAndNil(FDockForms);  { must be done after 'inherited' because Notification accesses FDockForms }
   FreeAndNil(FFloatParent);
-  UninstallHookProc(Self, ToolbarHookProc);
+  UninstallHookProc(Self, @ToolbarHookProc);
 end;
 
 function TTBCustomDockableWindow.HasParent: Boolean;
@@ -2757,7 +2758,7 @@ begin
     if not ApplicationIsActive then
       Inactive := True
     else if (FFloatingMode = fmOnTopOfParentForm) and
-       (HWND(GetWindowLong(Parent.Handle, GWL_HWNDPARENT)) <> Application.Handle) then begin
+       (HWND(GetWindowLong(Parent.Handle, GWL_HWNDPARENT)) <> 0) then begin
       { Use inactive caption if the active window doesn't own the float parent
         (directly or indirectly). Note: For compatibility with browser-embedded
         TActiveForms, we use IsAncestorOfWindow instead of checking
@@ -2816,16 +2817,16 @@ procedure TTBCustomDockableWindow.UpdateVisibility;
 { Updates the visibility of the tool window, and additionally the caption
   state if floating and showing }
 var
-  IsVisible: Boolean;
+  AIsVisible: Boolean;
 begin
   if HandleAllocated then begin
-    IsVisible := IsWindowVisible(Handle);
-    if IsVisible <> GetShowingState then begin
+    AIsVisible := IsWindowVisible(Handle);
+    if AIsVisible <> GetShowingState then begin
       Perform(CM_SHOWINGCHANGED, 0, 0);
       { Note: CMShowingChanged will call UpdateCaptionState automatically
         when floating and showing }
     end
-    else if IsVisible and Floating then begin
+    else if AIsVisible and Floating then begin
       { If we're floating and we didn't send the CM_SHOWINGCHANGED message
         then we have to call UpdateCaptionState manually }
       UpdateCaptionState;
@@ -2889,7 +2890,7 @@ const
     SWP_NOSIZE or SWP_NOMOVE or SWP_NOZORDER or SWP_NOACTIVATE or SWP_HIDEWINDOW,
     SWP_NOSIZE or SWP_NOMOVE or SWP_NOZORDER or SWP_NOACTIVATE or SWP_SHOWWINDOW);
 var
-  Show: Boolean;
+  AShow: Boolean;
   Form: TTBCustomForm;
 begin
   { inherited isn't called since TTBCustomDockableWindow handles CM_SHOWINGCHANGED
@@ -2903,9 +2904,9 @@ begin
     end;
   }
   if HandleAllocated then begin
-    Show := GetShowingState;
+    AShow := GetShowingState;
     if Parent is TTBFloatingWindowParent then begin
-      if Show then begin
+      if AShow then begin
         { If the toolbar is floating, set its "owner window" to the parent form
           so that the toolbar window always stays on top of the form }
         if FFloatingMode = fmOnTopOfParentForm then begin
@@ -2920,7 +2921,7 @@ begin
           end;
         end
         else begin
-          SetWindowOwner(Parent.Handle, Application.Handle);
+          SetWindowOwner(Parent.Handle, 0);
         end;
         { Initialize caption state after setting owner but before showing }
         UpdateCaptionState;
@@ -2933,11 +2934,11 @@ begin
         cause a Stack Overflow error if the program's main form was closed
         while a floating toolwindow was focused. (This problem did not occur
         on NT.) }
-      TTBFloatingWindowParent(Parent).FShouldShow := Show;
+      TTBFloatingWindowParent(Parent).FShouldShow := AShow;
       Parent.Perform(CM_SHOWINGCHANGED, 0, 0);
     end;
-    SetWindowPos(Handle, 0, 0, 0, 0, 0, ShowFlags[Show]);
-    if not Show and (GetActiveWindow = Handle) then
+    SetWindowPos(Handle, 0, 0, 0, 0, 0, ShowFlags[AShow]);
+    if not AShow and (GetActiveWindow = Handle) then
       { If the window is hidden but is still active, find and activate a
         different window }
       SetActiveWindow(FindTopLevelWindow(Handle));
@@ -3028,8 +3029,8 @@ end;
 procedure TTBCustomDockableWindow.DefineProperties(Filer: TFiler);
 begin
   inherited;
-  Filer.DefineProperty('SavedAtRunTime', ReadSavedAtRunTime,
-    WriteSavedAtRunTime, not(csDesigning in ComponentState));
+  Filer.DefineProperty('SavedAtRunTime', @ReadSavedAtRunTime,
+    @WriteSavedAtRunTime, not(csDesigning in ComponentState));
 end;
 
 procedure TTBCustomDockableWindow.Loaded;
@@ -3450,7 +3451,7 @@ begin
   Message.Result := 0;
   if Docked then begin
     {$IFNDEF CLR}
-    ApplyToRect(Message.CalcSize_Params.rgrc[0]);
+    ApplyToRect(Message.CalcSize_Params^.rgrc[0]);
     {$ELSE}
     Params := Message.CalcSize_Params;
     ApplyToRect(Params.rgrc0);
@@ -3494,7 +3495,7 @@ var
   X, Y, Y2, Y3, YO, S, SaveIndex: Integer;
   R2, R3, R4: TRect;
   P1, P2: TPoint;
-  Brush: HBRUSH;
+  ABrush: HBRUSH;
   Clr: TColorRef;
   UsingBackground, B: Boolean;
 
@@ -3550,7 +3551,7 @@ begin
 
     VerticalDock := CurrentDock.Position in PositionLeftOrRight;
 
-    Brush := CreateSolidBrush(ColorToRGB(Color));
+    ABrush := CreateSolidBrush(ColorToRGB(Color));
 
     UsingBackground := CurrentDock.UsingBackground and CurrentDock.FBkgOnToolbars;
 
@@ -3558,11 +3559,11 @@ begin
     if BorderStyle = bsSingle then
       DrawRaisedEdge(R, False)
     else
-      FrameRect(DC, R, Brush);
+      FrameRect(DC, R, ABrush);
     R2 := R;
     InflateRect(R2, -1, -1);
     if not UsingBackground then
-      FrameRect(DC, R2, Brush);
+      FrameRect(DC, R2, ABrush);
 
     { Draw the Background }
     if UsingBackground then begin
@@ -3625,7 +3626,7 @@ begin
         else
           R2 := Rect(DockedBorderSize, DockedBorderSize,
             Y2, DockedBorderSize+S);
-        FillRect(DC, R2, Brush);
+        FillRect(DC, R2, ABrush);
       end;
       RestoreDC(DC, SaveIndex);
       { Close button }
@@ -3642,7 +3643,7 @@ begin
       end;
     end;
 
-    DeleteObject(Brush);
+    DeleteObject(ABrush);
   finally
     if not DrawToDC then
       ReleaseDC(Handle, DC);
@@ -3671,13 +3672,13 @@ end;
 
 procedure TTBCustomDockableWindow.WMPrint(var Message: TMessage);
 begin
-  HandleWMPrint(Handle, Message, DockableWindowNCPaintProc, Self);
+  HandleWMPrint(Handle, Message, @DockableWindowNCPaintProc, Self);
 end;
 
 procedure TTBCustomDockableWindow.WMPrintClient(var Message:
   {$IFNDEF CLR} TMessage {$ELSE} TWMPrintClient {$ENDIF});
 begin
-  HandleWMPrintClient(PaintHandler, Message);
+  HandleWMPrintClient(@PaintHandler, Message);
 end;
 
 procedure TTBCustomDockableWindow.WMEraseBkgnd(var Message: TWMEraseBkgnd);
@@ -3718,7 +3719,7 @@ end;
 
 function TTBCustomDockableWindow.PaletteChanged(Foreground: Boolean): Boolean;
 begin
-  Result := inherited PaletteChanged(Foreground);
+  Result := PaletteChanged(Foreground);
   if Result and not Foreground then begin
     { There seems to be a bug in Delphi's palette handling. When the form is
       inactive and another window realizes a palette, docked TToolbar97s
@@ -4120,7 +4121,7 @@ var
 var
   Accept: Boolean;
   R: TRect;
-  Msg: TMsg;
+  Msg: Windows.TMsg;
   NewDockedSize: TDockedSize;
   I, J: Integer;
 begin
@@ -4539,7 +4540,7 @@ begin
         BR := GetDockedCloseButtonRect(
           TBGetDockTypeOf(CurrentDock, Floating) = dtLeftRight);
         OffsetRect(BR, R.Left, R.Top);
-        if CloseButtonLoop(Handle, BR, SetCloseButtonState) then
+        if CloseButtonLoop(Handle, BR, @SetCloseButtonState) then
           Close;
       end;
     HT_TB2k_Border: begin
@@ -4606,7 +4607,7 @@ begin
   {$ENDIF}
 end;
 
-procedure TTBCustomDockableWindow.WMNCRButtonUp(var Message: TWMNCRButtonUp);
+procedure TTBCustomDockableWindow.WMNCRButtonUp(var Message: TWMNCLButtonUp);
 begin
   ShowNCContextMenu(Message.XCursor, Message.YCursor);
 end;
@@ -4623,7 +4624,7 @@ procedure TTBCustomDockableWindow.WMContextMenu(var Message: TWMContextMenu);
 var
   Pt, Temp: TPoint;
   Handled: Boolean;
-  PopupMenu: TPopupMenu;
+  APopupMenu: TPopupMenu;
 begin
   { Added 'inherited;' here }
   inherited;
@@ -4654,14 +4655,14 @@ begin
   Message.Result := Ord(Handled);
   if Handled then Exit;
 
-  PopupMenu := GetPopupMenu;
-  if (PopupMenu <> nil) and PopupMenu.AutoPopup then
+  APopupMenu := GetPopupMenu;
+  if (APopupMenu <> nil) and APopupMenu.AutoPopup then
   begin
-    SendCancelMode(Self);
-    PopupMenu.PopupComponent := Self;
+    //TODO: SendCancelMode(Self);
+    APopupMenu.PopupComponent := Self;
     if InvalidPoint(Pt) then
       Pt := ClientToScreen(Point(0, 0));
-    PopupMenu.Popup(Pt.X, Pt.Y);
+    APopupMenu.Popup(Pt.X, Pt.Y);
     Message.Result := 1;
   end;
 
@@ -4689,7 +4690,7 @@ begin
   Result := tbsmNone;
 end;
 
-procedure TTBCustomDockableWindow.ResizeBegin;
+procedure TTBCustomDockableWindow.ResizeBegin(SizeHandle: TTBSizeHandle);
 begin
 end;
 
@@ -4775,7 +4776,7 @@ var
   end;
 var
   Accept: Boolean;
-  Msg: TMsg;
+  Msg: Windows.TMsg;
   R: TRect;
 begin
   if not Floating then Exit;
@@ -5167,7 +5168,7 @@ begin
   inherited;
   FBkColor := clBtnFace;
   FBitmap := TBitmap.Create;
-  FBitmap.OnChange := BitmapChanged;
+  FBitmap.OnChange := @BitmapChanged;
 end;
 
 destructor TTBBackground.Destroy;
@@ -5230,7 +5231,7 @@ begin
           FBitmap.Canvas.Pixels[0, Height-1] or $02000000);
       end;
     end;
-    FBitmap.Dormant;
+    FBitmap.Destroy;
   end;
   UseBmp := FBitmapCache;
 
@@ -5565,7 +5566,7 @@ begin
   try
     Data.IniFile := IniFile;
     Data.SectionNamePrefix := SectionNamePrefix;
-    TBCustomLoadPositions(OwnerComponent, IniReadInt, IniReadString, Data);
+    TBCustomLoadPositions(OwnerComponent, @IniReadInt, @IniReadString, Data);
   finally
     Data.Free;
   end;
@@ -5593,7 +5594,7 @@ begin
   try
     Data.IniFile := IniFile;
     Data.SectionNamePrefix := SectionNamePrefix;
-    TBCustomSavePositions(OwnerComponent, IniWriteInt, IniWriteString, Data);
+    TBCustomSavePositions(OwnerComponent, @IniWriteInt, @IniWriteString, Data);
   finally
     Data.Free;
   end;
@@ -5645,7 +5646,7 @@ begin
     {$ENDIF}
     Reg.RootKey := RootKey;
     if Reg.OpenKey(BaseRegistryKey, False) then
-      TBCustomLoadPositions(OwnerComponent, RegReadInt, RegReadString, Reg);
+      TBCustomLoadPositions(OwnerComponent, @RegReadInt, @RegReadString, Reg);
   finally
     Reg.Free;
   end;
@@ -5661,7 +5662,7 @@ begin
     Reg.RootKey := RootKey;
     Reg.CreateKey(BaseRegistryKey);
     if Reg.OpenKey(BaseRegistryKey, True) then
-      TBCustomSavePositions(OwnerComponent, RegWriteInt, RegWriteString, Reg);
+      TBCustomSavePositions(OwnerComponent, @RegWriteInt, @RegWriteString, Reg);
   finally
     Reg.Free;
   end;

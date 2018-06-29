@@ -40,7 +40,8 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
   {$IFDEF CLR} TB2OleMarshal, {$ENDIF}
-  StdCtrls, CommCtrl, Menus, ActnList, ImgList, TB2Anim;
+  StdCtrls, CommCtrl, Menus, ActnList, ImgList, TB2Anim, LCLType, LMessages,
+  contnrs;
 
 type
   TTBCustomItem = class;
@@ -114,7 +115,7 @@ type
     FImagesChangeLink: TTBImageChangeLink;
     FItems: TList;
     FItemStyle: TTBItemStyle;
-    FLinkParents: TList;
+    FLinkParents: TObjectList;
     FMaskOptions: TTBItemOptions;
     FOptions: TTBItemOptions;
     FInheritOptions: Boolean;
@@ -220,7 +221,7 @@ type
     function IndexOf(AItem: TTBCustomItem): Integer;
     procedure InitiateAction; virtual;
     procedure Insert(NewIndex: Integer; AItem: TTBCustomItem);
-    function IsShortCut(var Message: TWMKey): Boolean;
+    function IsShortCut(var Message: TLMKey): Boolean;
     procedure Move(CurIndex, NewIndex: Integer);
     function Popup(X, Y: Integer; TrackRightButton: Boolean;
       Alignment: TTBPopupAlignment = tbpaLeft;
@@ -407,7 +408,7 @@ type
     FOpenViewerWindow: TTBPopupWindow;
     FParentView: TTBView;
     FParentItem: TTBCustomItem;
-    FPriorityList: TList;
+    FPriorityList: TObjectList;
     FOrientation: TTBViewOrientation;
     FScrollOffset: Integer;
     FSelected: TTBItemViewer;
@@ -678,7 +679,7 @@ type
   protected
     procedure CreateParams(var Params: TCreateParams); override;
     procedure CreateWnd; override;
-    procedure DestroyWindowHandle; override;
+    procedure DestroyHandle; override;
     function GetViewClass: TTBViewClass; dynamic;
     procedure Paint; override;
     procedure PaintScrollArrows; virtual;
@@ -734,7 +735,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure GetChildren(Proc: TGetChildProc; Root: TComponent); override;
-    function IsShortCut(var Message: TWMKey): Boolean; override;
+    function IsShortCut(var Message: TLMKey): Boolean; override;
     procedure Popup(X, Y: Integer); override;
     function PopupEx(X, Y: Integer; ReturnClickedItemOnly: Boolean = False): TTBCustomItem;
   published
@@ -848,7 +849,7 @@ var
 threadvar
   ClickWndRefCount: Integer;
   ClickWnd: HWND;
-  ClickList: TList;
+  ClickList: TObjectList;
 
 type
   TTBModalHandler = class
@@ -936,9 +937,9 @@ var
   I: Integer;
 begin
   if ClickWnd = 0 then
-    ClickWnd := {$IFDEF ALLOCHWND_CLASSES}Classes.{$ENDIF} AllocateHWnd(TTBCustomItem.ClickWndProc);
+    ClickWnd := 0;
   if ClickList = nil then
-    ClickList := TList.Create;
+    ClickList := TObjectList.Create;
 
   { Add a new item to ClickList or replace an empty one }
   I := ClickList.IndexOf(nil);
@@ -1283,7 +1284,7 @@ begin
     if FActionLink = nil then
       FActionLink := GetActionLinkClass.Create(Self);
     FActionLink.Action := Value;
-    FActionLink.OnChange := DoActionChange;
+    FActionLink.OnChange := @DoActionChange;
     { Note: Delphi's Controls.pas and Menus.pas merely check for
       "csLoading in Value.ComponentState" here. But that doesn't help when
       the Action property references an action on another form / data module
@@ -1388,7 +1389,7 @@ end;
 
 class procedure TTBCustomItem.ClickWndProc(var Message: TMessage);
 var
-  List: TList;
+  List: TObjectList;
   I: Integer;
   Item: TObject;
 begin
@@ -1493,7 +1494,7 @@ begin
     Result := nil;
     Exit;
   end;
-  Result := TTBCustomItem(FItems.List[Index]);
+  Result := TTBCustomItem(@FItems.List[Index]);
 end;
 
 procedure TTBCustomItem.Add(AItem: TTBCustomItem);
@@ -1607,7 +1608,7 @@ var
   I: Integer;
 begin
   for I := 0 to Count-1 do
-    if FItems.List[I] = AItem then begin
+    if FItems[I] = Pointer(AItem) then begin
       Result := I;
       Exit;
     end;
@@ -2026,24 +2027,24 @@ function TTBCustomItem.OpenPopup(const SelectFirstItem, TrackRightButton: Boolea
   const ReturnClickedItemOnly: Boolean): TTBCustomItem;
 var
   ModalHandler: TTBModalHandler;
-  Popup: TTBPopupWindow;
+  PopupWindow: TTBPopupWindow;
   DoneActionData: TTBDoneActionData;
 begin
   ModalHandler := TTBModalHandler.Create(0);
   try
-    Popup := CreatePopup(nil, nil, False, SelectFirstItem, False, PopupPoint,
+    PopupWindow := CreatePopup(nil, nil, False, SelectFirstItem, False, PopupPoint,
       Alignment);
     try
-      Include(Popup.View.FState, vsIgnoreFirstMouseUp);
-      ModalHandler.RootPopup := Popup;
-      ModalHandler.Loop(Popup.View, False, False, False, TrackRightButton);
-      DoneActionData := Popup.View.FDoneActionData;
+      Include(PopupWindow.View.FState, vsIgnoreFirstMouseUp);
+      ModalHandler.RootPopup := PopupWindow;
+      ModalHandler.Loop(PopupWindow.View, False, False, False, TrackRightButton);
+      DoneActionData := PopupWindow.View.FDoneActionData;
     finally
       ModalHandler.RootPopup := nil;
       { Remove vsModal state from the root view before any TTBView.Destroy
         methods get called, so that NotifyFocusEvent becomes a no-op }
-      Exclude(Popup.View.FState, vsModal);
-      Popup.Free;
+      Exclude(PopupWindow.View.FState, vsModal);
+      PopupWindow.Free;
     end;
   finally
     ModalHandler.Free;
@@ -2098,9 +2099,9 @@ begin
   Result := DoItem(Self, 0);
 end;
 
-function TTBCustomItem.IsShortCut(var Message: TWMKey): Boolean;
+function TTBCustomItem.IsShortCut(var Message: TLMKey): Boolean;
 var
-  ShortCut: TShortCut;
+  OneShortCut: TShortCut;
   ShiftState: TShiftState;
   ShortCutItem, TopmostItem, Item, EventItem: TTBCustomItem;
   I: Integer;
@@ -2108,7 +2109,7 @@ label StartOver;
 begin
   Result := False;
   ShiftState := KeyDataToShiftState(ClipToLongint(Message.KeyData));
-  ShortCut := Menus.ShortCut(Message.CharCode, ShiftState);
+  OneShortCut := Menus.ShortCut(Message.CharCode, ShiftState);
 StartOver:
   ShortCutItem := FindItemWithShortCut(ShortCut, TopmostItem);
   if Assigned(ShortCutItem) then begin
@@ -2184,7 +2185,7 @@ begin
   P := Pos(#9, Caption);
   if P = 0 then begin
     if ShortCut <> 0 then
-      Result := ShortCutToText(ShortCut)
+      Result := ''
     else
       Result := '';
   end
@@ -2333,7 +2334,7 @@ begin
       AChangeLink := TTBImageChangeLink.Create;
       AChangeLink.FLastWidth := Value.Width;
       AChangeLink.FLastHeight := Value.Height;
-      AChangeLink.OnChange := ImageListChangeHandler;
+      AChangeLink.OnChange := @ImageListChangeHandler;
     end;
     Value.RegisterChanges(AChangeLink);
     Value.FreeNotification(Self);
@@ -2691,7 +2692,7 @@ begin
   { Add shortcut text }
   if (Result <> '') and Application.HintShortCuts and
      (Item.ShortCut <> scNone) then
-    Result := Format('%s (%s)', [Result, ShortCutToText(Item.ShortCut)]);
+    Result := Format('%s (%s)', [Result, '']);
 end;
 
 function TTBItemViewer.CaptionShown: Boolean;
@@ -2746,7 +2747,7 @@ procedure TTBItemViewer.CalcSize(const Canvas: TCanvas;
 var
   ToolbarStyle: Boolean;
   DC: HDC;
-  TextMetrics: TTextMetric;
+  TextMetrics: Windows.TTextMetric;
   H, LeftMargin: Integer;
   ImgList: TCustomImageList;
   S: String;
@@ -2993,7 +2994,7 @@ var
   WhitePoints: array[0..4] of TPoint;
   DrawTextFlags: UINT;
   LeftMargin: Integer;
-  TextMetrics: TTextMetric;
+  TextMetrics: Windows.TTextMetric;
 begin
   ToolbarStyle := IsToolbarStyle;
   ShowEnabled := Item.Enabled or View.Customizing;
@@ -3433,7 +3434,7 @@ begin
   FParentItem := AParentItem;
   if Assigned(FParentItem) then begin
     //FIsToolbar := FIsToolbar or FParentItem.FDisplayAsToolbar;
-    FParentItem.RegisterNotification(LinkNotification);
+    FParentItem.RegisterNotification(@LinkNotification);
     FParentItem.FreeNotification(Self);
   end;
   FUsePriorityList := AUsePriorityList;
@@ -3462,9 +3463,9 @@ begin
       ParentView.Invalidate(ParentView.FOpenViewer);
   end;
   if Assigned(FCurParentItem) then
-    FCurParentItem.UnregisterNotification(ItemNotification);
+    FCurParentItem.UnregisterNotification(@ItemNotification);
   if Assigned(FParentItem) then
-    FParentItem.UnregisterNotification(LinkNotification);
+    FParentItem.UnregisterNotification(@LinkNotification);
   inherited;
   FPriorityList.Free;
   FreeViewers;
@@ -3514,10 +3515,10 @@ begin
   if FCurParentItem <> Value then begin
     CloseChildPopups;
     if Assigned(FCurParentItem) then
-      FCurParentItem.UnregisterNotification(ItemNotification);
+      FCurParentItem.UnregisterNotification(@ItemNotification);
     FCurParentItem := Value;
     if Assigned(Value) then
-      Value.RegisterNotification(ItemNotification);
+      Value.RegisterNotification(@ItemNotification);
     RecreateAllViewers;
     if Assigned(Value) and not(csDesigning in Value.ComponentState) then
       InitiateActions;
@@ -3585,7 +3586,7 @@ begin
     Result := nil;
     Exit;
   end;
-  Result := TTBItemViewer(FViewers.List[Index]);
+  Result := TTBItemViewer(FViewers[Index]);
 end;
 
 function TTBView.GetViewerCount: Integer;
@@ -3660,7 +3661,7 @@ var
 begin
   if Assigned(AViewer) then
     for I := 0 to FViewers.Count-1 do
-      if FViewers.List[I] = AViewer then begin
+      if FViewers[I] = Pointer(AViewer) then begin
         Result := I;
         Exit;
       end;
@@ -5670,7 +5671,7 @@ begin
   else
     EndModal;
   {$IFNDEF CLR}
-  Exit; asm db 0,'Toolbar2000 (C) 1998-2008 Jordan Russell',0 end;
+  Exit;
   {$ENDIF}
 end;
 
@@ -5828,7 +5829,7 @@ begin
   if AExistingWnd <> 0 then
     FWnd := AExistingWnd
   else begin
-    FWnd := {$IFDEF ALLOCHWND_CLASSES}Classes.{$ENDIF} AllocateHWnd(WndProc);
+    FWnd := 0;
     FCreatedWnd := True;
   end;
   RemoveFocusIfOnOtherThread;
@@ -6059,7 +6060,7 @@ var
 
 var
   MouseDownOnMenu: Boolean;
-  Msg: TMsg;
+  Msg: Windows.TMsg;
   P: TPoint;
   Ctl: TControl;
   View: TTBView;
@@ -6364,10 +6365,10 @@ begin
   else
     Include(FView.FStyle, vsUseHiddenAccels);
 
-  if Application.Handle <> 0 then
+  if 0 <> 0 then
     { Use Application.Handle if possible so that the taskbar button for the app
       doesn't pop up when a TTBEditItem on a popup menu is focused }
-    ParentWindow := Application.Handle
+    ParentWindow := 0
   else
     { When Application.Handle is zero, use GetDesktopWindow() as the parent
       window, not zero, otherwise UpdateControlState won't show the window }
@@ -6386,7 +6387,7 @@ begin
     DestroyWindowHandle calls CallNotifyWinEvent which may result in
     FView.HandleWMObject being called }
   if HandleAllocated then
-    DestroyWindowHandle;
+    DestroyHandle;
   FreeAndNil(FView);
   inherited;
 end;
@@ -6432,7 +6433,7 @@ begin
   end;
 end;
 
-procedure TTBPopupWindow.DestroyWindowHandle;
+procedure TTBPopupWindow.DestroyHandle;
 begin
   { Before destroying the window handle, we must stop any animation, otherwise
     the animation thread will use an invalid handle }
@@ -6562,7 +6563,7 @@ var
 {$ENDIF}
 begin
   {$IFNDEF CLR}
-  ApplyToRect(Message.CalcSize_Params.rgrc[0]);
+  ApplyToRect(Message.CalcSize_Params^.rgrc[0]);
   {$ELSE}
   Params := Message.CalcSize_Params;
   ApplyToRect(Params.rgrc0);
@@ -6613,13 +6614,13 @@ end;
 
 procedure TTBPopupWindow.WMPrint(var Message: TMessage);
 begin
-  HandleWMPrint(Handle, Message, PopupWindowNCPaintProc, Self);
+  HandleWMPrint(Handle, Message, @PopupWindowNCPaintProc, Self);
 end;
 
 procedure TTBPopupWindow.WMPrintClient(var Message:
   {$IFNDEF CLR} TMessage {$ELSE} TWMPrintClient {$ENDIF});
 begin
-  HandleWMPrintClient(PaintHandler, Message);
+  HandleWMPrintClient(@PaintHandler, Message);
 end;
 
 procedure TTBPopupWindow.CMHintShow(var Message: TCMHintShow);
@@ -6671,7 +6672,7 @@ begin
   inherited;
   FItem := GetRootItemClass.Create(Self);
   FItem.ParentComponent := Self;
-  FItem.OnClick := RootItemClick;
+  FItem.OnClick := @RootItemClick;
 end;
 
 destructor TTBPopupMenu.Destroy;
@@ -6763,7 +6764,7 @@ begin
     TTBPopupAlignment(Alignment), ReturnClickedItemOnly);
 end;
 
-function TTBPopupMenu.IsShortCut(var Message: TWMKey): Boolean;
+function TTBPopupMenu.IsShortCut(var Message: TLMKey): Boolean;
 begin
   Result := FItem.IsShortCut(Message);
 end;
@@ -6775,13 +6776,13 @@ constructor TTBCustomImageList.Create(AOwner: TComponent);
 begin
   inherited;
   FCheckedImagesChangeLink := TChangeLink.Create;
-  FCheckedImagesChangeLink.OnChange := ImageListChanged;
+  FCheckedImagesChangeLink.OnChange := @ImageListChanged;
   FDisabledImagesChangeLink := TChangeLink.Create;
-  FDisabledImagesChangeLink.OnChange := ImageListChanged;
+  FDisabledImagesChangeLink.OnChange := @ImageListChanged;
   FHotImagesChangeLink := TChangeLink.Create;
-  FHotImagesChangeLink.OnChange := ImageListChanged;
+  FHotImagesChangeLink.OnChange := @ImageListChanged;
   FImagesBitmap := TBitmap.Create;
-  FImagesBitmap.OnChange := ImagesBitmapChanged;
+  FImagesBitmap.OnChange := @ImagesBitmapChanged;
   FImagesBitmapMaskColor := clFuchsia;
 end;
 
@@ -6938,25 +6939,25 @@ end;
 
 {$IFNDEF CLR}
 function TTBBaseAccObject.GetIDsOfNames(const IID: TGUID; Names: Pointer;
-  NameCount, LocaleID: Integer; DispIDs: Pointer): HResult;
+  NameCount, LocaleID: Integer; DispIDs: Pointer): HResult; stdcall;
 begin
   Result := E_NOTIMPL;
 end;
 
 function TTBBaseAccObject.GetTypeInfo(Index, LocaleID: Integer;
-  out TypeInfo): HResult;
+  out TypeInfo): HResult; stdcall;
 begin
   Result := E_NOTIMPL;
 end;
 
-function TTBBaseAccObject.GetTypeInfoCount(out Count: Integer): HResult;
+function TTBBaseAccObject.GetTypeInfoCount(out Count: Integer): HResult; stdcall;
 begin
   Result := E_NOTIMPL;
 end;
 
 function TTBBaseAccObject.Invoke(DispID: Integer; const IID: TGUID;
   LocaleID: Integer; Flags: Word; var Params; VarResult, ExcepInfo,
-  ArgErr: Pointer): HResult;
+  ArgErr: Pointer): HResult; stdcall;
 begin
   Result := E_NOTIMPL;
 end;

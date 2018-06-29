@@ -1,0 +1,5 @@
+*.compiled
+*.o
+*.obj
+*.bak
+**/lib/x86_64-win64/

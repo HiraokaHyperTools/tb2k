@@ -525,7 +525,7 @@ end;
 
 procedure TTBEditItemViewer.EditWndProc(var Message: TMessage);
 var
-  Item: TTBEditItem;
+  AItem: TTBEditItem;
 
   procedure AcceptText;
   var
@@ -534,14 +534,14 @@ var
   begin
     S := FEditControl.Text;
     Accept := True;
-    if Assigned(Item.FOnAcceptText) then
-      Item.FOnAcceptText(Self, S, Accept);
+    if Assigned(AItem.FOnAcceptText) then
+      AItem.FOnAcceptText(Self, S, Accept);
     if Accept then
-      Item.Text := S;
+      AItem.Text := S;
   end;
 
 begin
-  Item := TTBEditItem(Self.Item);
+  AItem := TTBEditItem(Self.Item);
   if Message.Msg = WM_CHAR then
     case Word(Message.WParam) of
       VK_TAB: begin
@@ -571,16 +571,16 @@ end;
 
 procedure TTBEditItemViewer.GetEditRect(var R: TRect);
 var
-  Item: TTBEditItem;
+  AItem: TTBEditItem;
   DC: HDC;
 begin
-  Item := TTBEditItem(Self.Item);
+  AItem := TTBEditItem(Self.Item);
   DC := GetDC(0);
   try
     SelectObject(DC, View.GetFont.Handle);
     R := BoundsRect;
-    if not View.IsToolbar and (Item.EditCaption <> '') then begin
-      Inc(R.Left, GetTextWidth(DC, Item.EditCaption, True) +
+    if not View.IsToolbar and (AItem.EditCaption <> '') then begin
+      Inc(R.Left, GetTextWidth(DC, AItem.EditCaption, True) +
         EditMenuMidWidth + EditMenuTextMargin * 2);
     end;
   finally
@@ -591,15 +591,15 @@ end;
 procedure TTBEditItemViewer.CalcSize(const Canvas: TCanvas;
   var AWidth, AHeight: Integer);
 var
-  Item: TTBEditItem;
+  AItem: TTBEditItem;
   DC: HDC;
 begin
-  Item := TTBEditItem(Self.Item);
+  AItem := TTBEditItem(Self.Item);
   DC := Canvas.Handle;
-  AWidth := Item.FEditWidth;
+  AWidth := AItem.FEditWidth;
   AHeight := GetTextHeight(DC) + (EditMenuTextMargin * 2) + 1;
-  if not IsToolbarStyle and (Item.EditCaption <> '') then begin
-    Inc(AWidth, GetTextWidth(DC, Item.EditCaption, True) + EditMenuMidWidth +
+  if not IsToolbarStyle and (AItem.EditCaption <> '') then begin
+    Inc(AWidth, GetTextWidth(DC, AItem.EditCaption, True) + EditMenuMidWidth +
       EditMenuTextMargin * 2);
   end;
   { Review: Should the height include external leading on fonts that use it,
@@ -624,17 +624,17 @@ const
   FillColors: array[Boolean] of TColor = (clBtnFace, clWindow);
   TextColors: array[Boolean] of TColor = (clGrayText, clWindowText);
 var
-  Item: TTBEditItem;
+  AItem: TTBEditItem;
   S: String;
   R: TRect;
   W: Integer;
 begin
-  Item := TTBEditItem(Self.Item);
+  AItem := TTBEditItem(Self.Item);
   R := ClientAreaRect;
 
   { Caption }
-  if not IsToolbarStyle and (Item.EditCaption <> '') then begin
-    S := Item.EditCaption;
+  if not IsToolbarStyle and (AItem.EditCaption <> '') then begin
+    S := AItem.EditCaption;
     W := GetTextWidth(Canvas.Handle, S, True) + EditMenuTextMargin * 2;
     R.Right := R.Left + W;
     if IsSelected then
@@ -647,23 +647,23 @@ begin
   end;
 
   { Border }
-  if IsSelected and Item.Enabled then
+  if IsSelected and AItem.Enabled then
     DrawEdge(Canvas.Handle, R, BDR_SUNKENOUTER, BF_RECT);
   InflateRect(R, -1, -1);
-  Canvas.Brush.Color := FillColors[not Item.Enabled];
+  Canvas.Brush.Color := FillColors[not AItem.Enabled];
   Canvas.FrameRect(R);
   InflateRect(R, -1, -1);
 
   { Fill }
-  Canvas.Brush.Color := FillColors[Item.Enabled];
+  Canvas.Brush.Color := FillColors[AItem.Enabled];
   Canvas.FillRect(R);
   InflateRect(R, -1, -1);
 
   { Text }
-  if Item.Text <> '' then begin
-    S := Item.Text;
+  if AItem.Text <> '' then begin
+    S := AItem.Text;
     Canvas.Brush.Style := bsClear;  { speed optimization }
-    Canvas.Font.Color := TextColors[Item.Enabled];
+    Canvas.Font.Color := TextColors[AItem.Enabled];
     DrawTextStr(Canvas.Handle, S, R, DT_SINGLELINE or DT_NOPREFIX);
   end;
 end;
@@ -798,7 +798,7 @@ function TTBEditItemViewer.EditLoop(const CapHandle: HWND): Boolean;
   begin
     { NOTE: We can't assign WndProc to WindowProc directly because on Delphi 4
       and 5, the compiler generates incorrect code, causing an AV at run-time }
-    OrigWndProc := TEditAccess(FEditControl).WndProc;
+    OrigWndProc := @TEditAccess(FEditControl).WndProc;
     FEditControl.WindowProc := OrigWndProc;
   end;
   {$ELSE}
@@ -808,11 +808,11 @@ function TTBEditItemViewer.EditLoop(const CapHandle: HWND): Boolean;
   {$ENDIF}
 
 var
-  Item: TTBEditItem;
+  AItem: TTBEditItem;
   R: TRect;
   ActiveWnd, FocusWnd: HWND;
 begin
-  Item := TTBEditItem(Self.Item);
+  AItem := TTBEditItem(Self.Item);
   GetEditRect(R);
   if IsRectEmpty(R) then begin
     Result := False;
@@ -831,14 +831,14 @@ begin
     FEditControl.BorderStyle := bsNone;
     FEditControl.AutoSize := False;
     FEditControl.Font.Assign(View.GetFont);
-    FEditControl.Text := Item.Text;
-    FEditControl.CharCase := Item.FCharCase;
-    FEditControl.MaxLength := Item.FMaxLength;
+    FEditControl.Text := AItem.Text;
+    FEditControl.CharCase := AItem.FCharCase;
+    FEditControl.MaxLength := AItem.FMaxLength;
     FEditControl.BoundsRect := R;
-    FEditControl.WindowProc := EditWndProc;
+    FEditControl.WindowProc := @EditWndProc;
     FEditControl.ParentWindow := View.Window.Handle;
     FEditControl.SelectAll;
-    Item.DoBeginEdit(Self);
+    AItem.DoBeginEdit(Self);
     FEditControl.Visible := True;
     FEditControl.SetFocus;
     if GetActiveWindow <> ActiveWnd then

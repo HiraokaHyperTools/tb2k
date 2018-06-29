@@ -31,16 +31,11 @@ interface
 {$I TB2Ver.inc}
 
 uses
-  Windows, Classes, SysUtils, Messages, Controls, Forms, LCLType, Graphics,
-  LMessages, contnrs;
+  Windows, Classes, SysUtils, Messages, Controls, Forms;
 
 type
   THandleWMPrintNCPaintProc = procedure(Wnd: HWND; DC: HDC; AppData: TObject);
-  TPaintHandlerProc = procedure(var Message: TLMPaint) of object;
-  TTrackMouseEventFunc = function(var EventTrack: TTrackMouseEvent): BOOL; stdcall;
-  TLockSetForegroundWindowFunc = function(uLockCode: UINT): BOOL; stdcall;
-  TWndStaticMethod = procedure(var TheMessage: TMessage);
-  TWndMethod2 = procedure(var TheMessage: TMessage) of object;
+  TPaintHandlerProc = procedure(var Message: TWMPaint) of object;
 
   { The type of item a TList holds; it differs between Win32 and .NET VCL }
   TListItemType = {$IFNDEF CLR} Pointer {$ELSE} TObject {$ENDIF};
@@ -49,8 +44,8 @@ type
   ClipToLongint = Longint;
   {$ENDIF}
 
-function AddToFrontOfList(var List: TObjectList; Item: TObject): Boolean;
-function AddToList(var List: TObjectList; Item: TObject): Boolean;
+function AddToFrontOfList(var List: TList; Item: TObject): Boolean;
+function AddToList(var List: TList; Item: TObject): Boolean;
 function ApplicationIsActive: Boolean;
 function AreFlatMenusEnabled: Boolean;
 function AreKeyboardCuesEnabled: Boolean;
@@ -115,46 +110,17 @@ procedure ProcessPaintMessages;
 procedure RaiseLastOSError;
 {$ENDIF}
 procedure RemoveMessages(const AMin, AMax: Integer);
-procedure RemoveFromList(var List: TObjectList; Item: TObject);
+procedure RemoveFromList(var List: TList; Item: TObject);
 procedure SelectNCUpdateRgn(Wnd: HWND; DC: HDC; Rgn: HRGN);
 function StripAccelChars(const S: String): String;
 function StripTrailingPunctuation(const S: String): String;
 function TextOutStr(const DC: HDC; const X, Y: Integer;
   const AText: String): BOOL;
 function UsingMultipleMonitors: Boolean;
-function ChildWindowFromPointEx(_para1:HWND; _para2:TPoint; _para3:UINT):HWND;
-function CopyPalette(Source: hPalette): hPalette;
 
 const
   PopupMenuWindowNCSize = 3;
   DT_HIDEPREFIX = $00100000;
-
-  EVENT_SYSTEM_MENUPOPUPSTART = $0006;
-  EVENT_SYSTEM_MENUPOPUPEND   = $0007;
-  OBJID_WINDOW            = DWORD($00000000);
-  OBJID_SYSMENU           = DWORD($FFFFFFFF);
-  OBJID_TITLEBAR          = DWORD($FFFFFFFE);
-  OBJID_MENU              = DWORD($FFFFFFFD);
-  OBJID_CLIENT            = DWORD($FFFFFFFC);
-  OBJID_VSCROLL           = DWORD($FFFFFFFB);
-  OBJID_HSCROLL           = DWORD($FFFFFFFA);
-  OBJID_SIZEGRIP          = DWORD($FFFFFFF9);
-  OBJID_CARET             = DWORD($FFFFFFF8);
-  OBJID_CURSOR            = DWORD($FFFFFFF7);
-  OBJID_ALERT             = DWORD($FFFFFFF6);
-  OBJID_SOUND             = DWORD($FFFFFFF5);
-  OBJID_QUERYCLASSNAMEIDX = DWORD($FFFFFFF4);
-  OBJID_NATIVEOM          = DWORD($FFFFFFF0);
-  CHILDID_SELF      = 0;
-  INDEXID_OBJECT    = 0;
-  INDEXID_CONTAINER = 0;
-  EVENT_OBJECT_FOCUS           = $8005; // hwnd + ID + idChild is focused item
-  EVENT_OBJECT_SELECTION       = $8006; // hwnd + ID + idChild is selected item (if only one), or idChild is OBJID_WINDOW if complex
-  EVENT_OBJECT_SELECTIONADD    = $8007; // hwnd + ID + idChild is item added
-  EVENT_OBJECT_SELECTIONREMOVE = $8008; // hwnd + ID + idChild is item removed
-  EVENT_OBJECT_SELECTIONWITHIN = $8009; // hwnd + ID + idChild is parent of changed selected items
-  EVENT_SYSTEM_MENUSTART = $0004;
-  EVENT_SYSTEM_MENUEND   = $0005;
 
 implementation
 
@@ -312,7 +278,7 @@ procedure HandleWMPrintClient(const PaintHandlerProc: TPaintHandlerProc;
   const Message: {$IFNDEF CLR} TMessage {$ELSE} TWMPrintClient {$ENDIF});
 var
   DC: HDC;
-  Msg: TLMPaint;
+  Msg: TWMPaint;
   SaveIndex: Integer;
 begin
   {$IFNDEF CLR}
@@ -323,6 +289,9 @@ begin
   {$ENDIF}
   Msg.Msg := WM_PAINT;
   Msg.DC := DC;
+  {$IFNDEF CLR}
+  Msg.Unused := 0;
+  {$ENDIF}
   Msg.Result := 0;
   SaveIndex := SaveDC(DC);
   try
@@ -334,7 +303,7 @@ end;
 
 function GetTextHeight(const DC: HDC): Integer;
 var
-  TextMetric: Windows.TTextMetric;
+  TextMetric: TTextMetric;
 begin
   GetTextMetrics(DC, TextMetric);
   Result := TextMetric.tmHeight;
@@ -417,7 +386,7 @@ procedure ProcessPaintMessages;
 { Dispatches all pending WM_PAINT messages. In effect, this is like an
   'UpdateWindow' on all visible windows }
 var
-  Msg: Windows.TMsg;
+  Msg: TMsg;
 begin
   while PeekMessage(Msg, 0, WM_PAINT, WM_PAINT, PM_NOREMOVE) do begin
     case Integer(GetMessage(Msg, 0, WM_PAINT, WM_PAINT)) of
@@ -435,7 +404,7 @@ end;
 procedure RemoveMessages(const AMin, AMax: Integer);
 { Removes any messages with the specified ID from the queue }
 var
-  Msg: Windows.TMsg;
+  Msg: TMsg;
 begin
   while PeekMessage(Msg, 0, AMin, AMax, PM_REMOVE) do begin
     if Msg.message = WM_QUIT then begin
@@ -462,27 +431,27 @@ begin
   end;
 end;
 
-function AddToList(var List: TObjectList; Item: TObject): Boolean;
+function AddToList(var List: TList; Item: TObject): Boolean;
 { Returns True if Item didn't already exist in the list }
 begin
   if List = nil then
-    List := TObjectList.Create;
+    List := TList.Create;
   Result := List.IndexOf(Item) = -1;
   if Result then
     List.Add(Item);
 end;
 
-function AddToFrontOfList(var List: TObjectList; Item: TObject): Boolean;
+function AddToFrontOfList(var List: TList; Item: TObject): Boolean;
 { Returns True if Item didn't already exist in the list }
 begin
   if List = nil then
-    List := TObjectList.Create;
+    List := TList.Create;
   Result := List.IndexOf(Item) = -1;
   if Result then
     List.Insert(0, Item);
 end;
 
-procedure RemoveFromList(var List: TObjectList; Item: TObject);
+procedure RemoveFromList(var List: TList; Item: TObject);
 begin
   if Assigned(List) then begin
     List.Remove(Item);
@@ -690,10 +659,9 @@ type
     Blue: Word;
     Alpha: Word;
   end;
-  TGradientFillFunc = function(DC: HDC; var Vertex: TNewTriVertex;
-    NumVertex: ULONG; Mesh: Pointer; NumMesh, Mode: ULONG): BOOL; stdcall;
 var
-  GradientFillFunc: TGradientFillFunc;
+  GradientFillFunc: function(DC: HDC; var Vertex: TNewTriVertex;
+    NumVertex: ULONG; Mesh: Pointer; NumMesh, Mode: ULONG): BOOL; stdcall;
 {$ENDIF}
 
 procedure InitGradientFillFunc;
@@ -707,7 +675,7 @@ begin
     {$IFNDEF CLR}
     M := {$IFDEF JR_D5} SafeLoadLibrary {$ELSE} LoadLibrary {$ENDIF} ('msimg32.dll');
     if M <> 0 then begin
-      GradientFillFunc := TGradientFillFunc(GetProcAddress(M, 'GradientFill'));
+      GradientFillFunc := GetProcAddressX(M, 'GradientFill');
       if Assigned(GradientFillFunc) then
         GradientFillAvailable := True;
     end;
@@ -794,7 +762,6 @@ var
   CaptionFont, SaveFont: HFONT;
   SaveBkMode: Integer;
   SaveTextColor: TColorRef;
-  ARectCopy: TRect;
 begin
   if ARect.Right <= ARect.Left then
     Exit;
@@ -808,8 +775,7 @@ begin
       Flags := Flags or DC_ACTIVE;
     if GetSystemParametersInfoBool(SPI_GETGRADIENTCAPTIONS, False) then
       Flags := Flags or DC_GRADIENT;
-    ARectCopy := ARect;
-    DrawCaption(Wnd, DC, ARectCopy, Flags);
+    DrawCaption(Wnd, DC, ARect, Flags);
   end
   else begin
     FillBackground;
@@ -906,18 +872,14 @@ type
     rcWork: TRect;
     dwFlags: DWORD;
   end;
-  TMonitorFromRect = function(const lprcScreenCoords: TRect; dwFlags: DWORD): HMONITOR; stdcall;
-  TMonitorFromPoint = function(ptScreenCoords: TPoint; dwFlags: DWORD): HMONITOR; stdcall;
-  TMonitorFromWindow = function(hWnd: HWND; dwFlags: DWORD): HMONITOR; stdcall;
-  TGetMonitorInfo = function(hMonitor: HMONITOR; var lpMonitorInfo: TMonitorInfo): BOOL; stdcall;
 const
   MONITOR_DEFAULTTONEAREST = $2;
 var
   MultiMonApis: record
-    MonitorFromRect: TMonitorFromRect;
-    MonitorFromPoint: TMonitorFromPoint;
-    MonitorFromWindow: TMonitorFromWindow;
-    GetMonitorInfo: TGetMonitorInfo
+    MonitorFromRect: function(const lprcScreenCoords: TRect; dwFlags: DWORD): HMONITOR; stdcall;
+    MonitorFromPoint: function(ptScreenCoords: TPoint; dwFlags: DWORD): HMONITOR; stdcall;
+    MonitorFromWindow: function(hWnd: HWND; dwFlags: DWORD): HMONITOR; stdcall;
+    GetMonitorInfo: function(hMonitor: HMONITOR; var lpMonitorInfo: TMonitorInfo): BOOL; stdcall;
   end;
   MultiMonApisAvailable: Boolean;
 
@@ -926,10 +888,10 @@ var
   User32Handle: THandle;
 begin
   User32Handle := GetModuleHandle(user32);
-  MultiMonApis.MonitorFromRect := TMonitorFromRect(GetProcAddress(User32Handle, 'MonitorFromRect'));
-  MultiMonApis.MonitorFromPoint := TMonitorFromPoint(GetProcAddress(User32Handle, 'MonitorFromPoint'));
-  MultiMonApis.MonitorFromWindow := TMonitorFromWindow(GetProcAddress(User32Handle, 'MonitorFromWindow'));
-  MultiMonApis.GetMonitorInfo := TGetMonitorInfo(GetProcAddress(User32Handle, 'GetMonitorInfoA'));
+  MultiMonApis.MonitorFromRect := GetProcAddress(User32Handle, 'MonitorFromRect');
+  MultiMonApis.MonitorFromPoint := GetProcAddress(User32Handle, 'MonitorFromPoint');
+  MultiMonApis.MonitorFromWindow := GetProcAddress(User32Handle, 'MonitorFromWindow');
+  MultiMonApis.GetMonitorInfo := GetProcAddress(User32Handle, 'GetMonitorInfoA');
   MultiMonApisAvailable := Assigned(MultiMonApis.MonitorFromRect) and
     Assigned(MultiMonApis.MonitorFromPoint) and
     Assigned(MultiMonApis.MonitorFromWindow) and
@@ -1014,7 +976,7 @@ end;
 {$IFNDEF CLR}
 var
   TrackMouseEventInited: BOOL;
-  TrackMouseEventFunc: TTrackMouseEventFunc;
+  TrackMouseEventFunc: function(var EventTrack: TTrackMouseEvent): BOOL; stdcall;
 
 procedure InitTrackMouseEvent;
 var
@@ -1024,14 +986,14 @@ begin
     If it doesn't exist, look for _TrackMouseEvent which is available on
     Windows 95 if IE 3.0 or later is installed. }
   if not TrackMouseEventInited then begin
-    TrackMouseEventFunc := TTrackMouseEventFunc(GetProcAddress(GetModuleHandle(user32),
-      'TrackMouseEvent'));
+    TrackMouseEventFunc := GetProcAddress(GetModuleHandle(user32),
+      'TrackMouseEvent');
     if @TrackMouseEventFunc = nil then begin
       TrackMouseEventComCtlModule :=
         {$IFDEF JR_D5} SafeLoadLibrary {$ELSE} LoadLibrary {$ENDIF} (comctl32);
       if TrackMouseEventComCtlModule <> 0 then
-        TrackMouseEventFunc := TTrackMouseEventFunc(GetProcAddress(TrackMouseEventComCtlModule,
-          '_TrackMouseEvent'));
+        TrackMouseEventFunc := GetProcAddress(TrackMouseEventComCtlModule,
+          '_TrackMouseEvent');
     end;
     InterlockedExchange(Integer(TrackMouseEventInited), Ord(True));
   end;
@@ -1067,7 +1029,7 @@ end;
 
 {$IFNDEF CLR}
 var
-  LockSetForegroundWindowFunc: TLockSetForegroundWindowFunc;
+  LockSetForegroundWindowFunc: function(uLockCode: UINT): BOOL; stdcall;
 {$ELSE}
 [SuppressUnmanagedCodeSecurity, DllImport(user32, CharSet = CharSet.Ansi, SetLastError = True, EntryPoint = 'LockSetForegroundWindow')]
 function LockSetForegroundWindowFunc(uLockCode: UINT): BOOL; external;
@@ -1193,7 +1155,7 @@ threadvar
   FontExistsResult: Boolean;
 
 {$IFNDEF CLR}
-function FontExistsCallback(lplf: LPLOGFONT; lptm: LPTEXTMETRIC;
+function FontExistsCallback(const lplf: TLogFont; const lptm: TTextMetric;
   dwType: DWORD; lpData: LPARAM): Integer; stdcall;
 {$ELSE}
 function FontExistsCallback([in] var lplf: TLogFont; [in] var lptm: TTextMetric;
@@ -1216,7 +1178,7 @@ function CreateRotatedFont(DC: HDC): HFONT;
 { Creates a font based on the DC's current font, but rotated 270 degrees }
 var
   LogFont: TLogFont;
-  TM: Windows.TTextMetric;
+  TM: TTextMetric;
   VerticalFontName: String;
 begin
   if GetObject(GetCurrentObject(DC, OBJ_FONT),
@@ -1292,7 +1254,7 @@ procedure DrawRotatedText(const DC: HDC; AText: String; const ARect: TRect;
   drawn centered. }
 var
   RotatedFont, SaveFont: HFONT;
-  TextMetrics: Windows.TTextMetric;
+  TextMetrics: TTextMetric;
   X, Y, P, I, SU, FU: Integer;
   SaveAlign: UINT;
   SavePen, Pen: HPEN;
@@ -1599,53 +1561,11 @@ begin
 end;
 {$ENDIF}
 
-function ChildWindowFromPointEx(_para1:HWND; _para2:TPoint; _para3:UINT):HWND;
-begin
-  ChildWindowFromPointEx(_para1, POINT(_para2.x, _para2.y), _para3);
-end;
-
-function AllocateHWnd(Method: TWndMethod2): HWND;
-begin
-end;
-
-function AllocateHWnd(Method: TWndStaticMethod): HWND;
-begin
-end;
-
-procedure DeallocateHWnd(Wnd: HWND);
-begin
-
-end;
-
-function CopyPalette(Source: hPalette): hPalette;
-var
-  LP: ^Windows.TLOGPALETTE;
-  NumEntries: integer;
-begin
-  Result := 0;
-  GetMem(LP, Sizeof(TLogPalette) + 256*Sizeof(TPaletteEntry));
-  try
-    with LP^ do
-      begin
-      palVersion := $300;
-      palNumEntries := 256;
-      NumEntries := GetPaletteEntries(Source, 0, 256, palPalEntry);
-      if NumEntries > 0 then
-        begin
-        palNumEntries := NumEntries;
-        Result := CreatePalette(LP^);
-       end;
-      end;
-  finally
-    FreeMem(LP, Sizeof(TLogPalette) + 256*Sizeof(TPaletteEntry));
-  end;
-end;
-
 initialization
   InitGradientFillFunc;
   {$IFNDEF CLR}
   InitMultiMonApis;
-  LockSetForegroundWindowFunc := TLockSetForegroundWindowFunc(GetProcAddress(GetModuleHandle(user32),
-    'LockSetForegroundWindow'));
+  LockSetForegroundWindowFunc := GetProcAddress(GetModuleHandle(user32),
+    'LockSetForegroundWindow');
   {$ENDIF}
 end.

@@ -1,5 +1,5 @@
 unit TB2Acc;
-
+a
 {
   Toolbar2000
   Copyright (C) 1998-2008 by Jordan Russell
@@ -36,15 +36,11 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
   {$IFDEF CLR} System.Runtime.InteropServices, {$ENDIF}
-  TB2Item, JwaWinUser;
+  TB2Item;
 
 type
-  TLresultFromObject = function(const riid: TGUID; wParam: WPARAM;
-    pUnk: IUnknown): LRESULT; stdcall;
-  TAccessibleObjectFromWindowFunc = function(hwnd: HWND; dwId: DWORD;
-    const riid: TGUID; out ppvObject): HRESULT; stdcall;
   { Our declaration for IAccessible }
-{$IFNDEF CLR}
+  {$IFNDEF CLR}
   TTBVariant = OleVariant;
   ITBAccessible = interface(IDispatch)
     ['{618736E0-3C3D-11CF-810C-00AA00389B71}']
@@ -231,8 +227,10 @@ function InitializeOleAcc: Boolean;
 
 {$IFNDEF CLR}
 var
-  LresultFromObjectFunc: TLresultFromObject;
-  AccessibleObjectFromWindowFunc: TAccessibleObjectFromWindowFunc;
+  LresultFromObjectFunc: function(const riid: TGUID; wParam: WPARAM;
+    pUnk: IUnknown): LRESULT; stdcall;
+  AccessibleObjectFromWindowFunc: function(hwnd: HWND; dwId: DWORD;
+    const riid: TGUID; out ppvObject): HRESULT; stdcall;
 {$ELSE}
 function LresultFromObjectFunc([in, MarshalAs(UnmanagedType.LPStruct)] riid: TGUID;
   wParam: WPARAM; [in, MarshalAs(UnmanagedType.IUnknown)] pUnk: TObject): LRESULT;
@@ -285,16 +283,14 @@ type
   TTBCustomItemAccess = class(TTBCustomItem);
   TTBItemViewerAccess = class(TTBItemViewer);
 
-  TNotifyWinEventFunc = procedure(event: DWORD; hwnd: HWND; idObject: Longint;
-      idChild: Longint); stdcall;
-
 {$IFNDEF CLR}
 var
   LastAccObject: TTBCustomAccObject;  { last object in the linked list }
   LastAccObjectCritSect: TRTLCriticalSection;
 
   NotifyWinEventInited: BOOL;
-  NotifyWinEventFunc: TNotifyWinEventFunc;
+  NotifyWinEventFunc: procedure(event: DWORD; hwnd: HWND; idObject: Longint;
+    idChild: Longint); stdcall;
 {$ENDIF}
 
 {$IFDEF CLR}
@@ -309,7 +305,7 @@ procedure CallNotifyWinEvent(event: DWORD; hwnd: HWND; idObject: DWORD;
 begin
   {$IFNDEF CLR}
   if not NotifyWinEventInited then begin
-    NotifyWinEventFunc := TNotifyWinEventFunc(GetProcAddress(GetModuleHandle(user32), 'NotifyWinEvent'));
+    NotifyWinEventFunc := GetProcAddress(GetModuleHandle(user32), 'NotifyWinEvent');
     InterlockedExchange(Integer(NotifyWinEventInited), Ord(True));
   end;
   if Assigned(NotifyWinEventFunc) then
@@ -332,8 +328,8 @@ begin
     M := {$IFDEF JR_D5} SafeLoadLibrary {$ELSE} LoadLibrary {$ENDIF} ('oleacc.dll');
     if M <> 0 then begin
       {$IFNDEF CLR}
-      LresultFromObjectFunc := TLresultFromObject(GetProcAddress(M, 'LresultFromObject'));
-      AccessibleObjectFromWindowFunc := TAccessibleObjectFromWindowFunc(GetProcAddress(M, 'AccessibleObjectFromWindow'));
+      LresultFromObjectFunc := GetProcAddress(M, 'LresultFromObject');
+      AccessibleObjectFromWindowFunc := GetProcAddress(M, 'AccessibleObjectFromWindow');
       if Assigned(LresultFromObjectFunc) and
          Assigned(AccessibleObjectFromWindowFunc) then
       {$ENDIF}
@@ -521,13 +517,13 @@ begin
     Result := True;
 end;
 
-function TTBViewAccObject.accDoDefaultAction(varChild: TTBVariant): HRESULT; stdcall;
+function TTBViewAccObject.accDoDefaultAction(varChild: TTBVariant): HRESULT;
 begin
   Result := S_FALSE;
 end;
 
 function TTBViewAccObject.accHitTest(xLeft, yTop: Integer;
-  out pvarID: TTBVariant): HRESULT; stdcall;
+  out pvarID: TTBVariant): HRESULT;
 var
   ViewWnd, W: HWND;
   R: TRect;
@@ -544,7 +540,7 @@ begin
     GetWindowRect(ViewWnd, R);
     P.X := xLeft;
     P.Y := yTop;
-    if R.Contains(P) then begin
+    if PtInRect(R, P) then begin
       P := FView.Window.ScreenToClient(P);
       W := ChildWindowFromPointEx(ViewWnd, P, CWP_SKIPINVISIBLE);
       if (W <> 0) and (W <> ViewWnd) then begin
@@ -570,7 +566,7 @@ begin
 end;
 
 function TTBViewAccObject.accLocation(out pxLeft, pyTop, pcxWidth,
-  pcyHeight: Integer; varChild: TTBVariant): HRESULT; stdcall;
+  pcyHeight: Integer; varChild: TTBVariant): HRESULT;
 var
   R: TRect;
 begin
@@ -589,7 +585,7 @@ begin
 end;
 
 function TTBViewAccObject.accNavigate(navDir: Integer; varStart: TTBVariant;
-  out pvarEnd: TTBVariant): HRESULT; stdcall;
+  out pvarEnd: TTBVariant): HRESULT;
 var
   I: Integer;
 begin
@@ -621,13 +617,13 @@ begin
 end;
 
 function TTBViewAccObject.accSelect(flagsSelect: Integer;
-  varChild: TTBVariant): HRESULT; stdcall;
+  varChild: TTBVariant): HRESULT;
 begin
   Result := DISP_E_MEMBERNOTFOUND;
 end;
 
 function TTBViewAccObject.get_accChild(varChild: TTBVariant;
-  out ppdispChild {$IFNDEF CLR}: IDispatch{$ENDIF}): HRESULT; stdcall;
+  out ppdispChild {$IFNDEF CLR}: IDispatch{$ENDIF}): HRESULT;
 var
   I, J: Integer;
   Viewer: TTBItemViewer;
@@ -680,7 +676,7 @@ begin
   end;
 end;
 
-function TTBViewAccObject.get_accChildCount(out pcountChildren: Integer): HRESULT; stdcall;
+function TTBViewAccObject.get_accChildCount(out pcountChildren: Integer): HRESULT;
 var
   Count, I: Integer;
 begin
@@ -701,37 +697,37 @@ begin
 end;
 
 function TTBViewAccObject.get_accDefaultAction(varChild: TTBVariant;
-  out pszDefaultAction: WideString): HRESULT; stdcall;
+  out pszDefaultAction: WideString): HRESULT;
 begin
   Result := S_FALSE;
 end;
 
 function TTBViewAccObject.get_accDescription(varChild: TTBVariant;
-  out pszDescription: WideString): HRESULT; stdcall;
+  out pszDescription: WideString): HRESULT;
 begin
   Result := S_FALSE;
 end;
 
-function TTBViewAccObject.get_accFocus(out pvarID: TTBVariant): HRESULT; stdcall;
+function TTBViewAccObject.get_accFocus(out pvarID: TTBVariant): HRESULT;
 begin
   Result := S_FALSE;
 end;
 
 function TTBViewAccObject.get_accHelp(varChild: TTBVariant;
-  out pszHelp: WideString): HRESULT; stdcall;
+  out pszHelp: WideString): HRESULT;
 begin
   Result := S_FALSE;
 end;
 
 function TTBViewAccObject.get_accHelpTopic(out pszHelpFile: WideString;
-  varChild: TTBVariant; out pidTopic: Integer): HRESULT; stdcall;
+  varChild: TTBVariant; out pidTopic: Integer): HRESULT;
 begin
   pidTopic := 0;  { Delphi doesn't implicitly clear Integer 'out' parameters }
   Result := S_FALSE;
 end;
 
 function TTBViewAccObject.get_accKeyboardShortcut(varChild: TTBVariant;
-  out pszKeyboardShortcut: WideString): HRESULT; stdcall;
+  out pszKeyboardShortcut: WideString): HRESULT;
 begin
   try
     if not Check(varChild, Result) then
@@ -748,7 +744,7 @@ begin
 end;
 
 function TTBViewAccObject.get_accName(varChild: TTBVariant;
-  out pszName: WideString): HRESULT; stdcall;
+  out pszName: WideString): HRESULT;
 var
   S: String;
 begin
@@ -770,7 +766,7 @@ begin
   end;
 end;
 
-function TTBViewAccObject.get_accParent(out ppdispParent {$IFNDEF CLR}: IDispatch{$ENDIF}): HRESULT; stdcall;
+function TTBViewAccObject.get_accParent(out ppdispParent {$IFNDEF CLR}: IDispatch{$ENDIF}): HRESULT;
 begin
   try
     if Assigned(FView) then begin
@@ -789,7 +785,7 @@ begin
 end;
 
 function TTBViewAccObject.get_accRole(varChild: TTBVariant;
-  out pvarRole: TTBVariant): HRESULT; stdcall;
+  out pvarRole: TTBVariant): HRESULT;
 var
   Role: Integer;
 begin
@@ -811,13 +807,13 @@ begin
   end;
 end;
 
-function TTBViewAccObject.get_accSelection(out pvarChildren: TTBVariant): HRESULT; stdcall;
+function TTBViewAccObject.get_accSelection(out pvarChildren: TTBVariant): HRESULT;
 begin
   Result := S_FALSE;
 end;
 
 function TTBViewAccObject.get_accState(varChild: TTBVariant;
-  out pvarState: TTBVariant): HRESULT; stdcall;
+  out pvarState: TTBVariant): HRESULT;
 begin
   try
     if not Check(varChild, Result) then
@@ -830,19 +826,19 @@ begin
 end;
 
 function TTBViewAccObject.get_accValue(varChild: TTBVariant;
-  out pszValue: WideString): HRESULT; stdcall;
+  out pszValue: WideString): HRESULT;
 begin
   Result := S_FALSE;
 end;
 
 function TTBViewAccObject.put_accName(varChild: TTBVariant;
-  const pszName: WideString): HRESULT; stdcall;
+  const pszName: WideString): HRESULT;
 begin
   Result := S_FALSE;
 end;
 
 function TTBViewAccObject.put_accValue(varChild: TTBVariant;
-  const pszValue: WideString): HRESULT; stdcall;
+  const pszValue: WideString): HRESULT;
 begin
   Result := S_FALSE;
 end;
@@ -964,7 +960,7 @@ begin
   end;
 end;
 
-function TTBItemViewerAccObject.accDoDefaultAction(varChild: TTBVariant): HRESULT; stdcall;
+function TTBItemViewerAccObject.accDoDefaultAction(varChild: TTBVariant): HRESULT;
 begin
   try
     if not Check(varChild, Result) then
@@ -996,7 +992,7 @@ begin
 end;
 
 function TTBItemViewerAccObject.accHitTest(xLeft, yTop: Integer;
-  out pvarID: TTBVariant): HRESULT; stdcall;
+  out pvarID: TTBVariant): HRESULT;
 var
   P: TPoint;
 begin
@@ -1006,7 +1002,7 @@ begin
       Exit;
     end;
     P := FViewer.View.Window.ScreenToClient(Point(xLeft, yTop));
-    if FViewer.BoundsRect.Contains(P) then begin
+    if PtInRect(FViewer.BoundsRect, P) then begin
       pvarID := TTBVariant(Integer(CHILDID_SELF));
       Result := S_OK;
     end
@@ -1018,7 +1014,7 @@ begin
 end;
 
 function TTBItemViewerAccObject.accLocation(out pxLeft, pyTop, pcxWidth,
-  pcyHeight: Integer; varChild: TTBVariant): HRESULT; stdcall;
+  pcyHeight: Integer; varChild: TTBVariant): HRESULT;
 var
   R: TRect;
   P: TPoint;
@@ -1040,7 +1036,7 @@ begin
 end;
 
 function TTBItemViewerAccObject.accNavigate(navDir: Integer; varStart: TTBVariant;
-  out pvarEnd: TTBVariant): HRESULT; stdcall;
+  out pvarEnd: TTBVariant): HRESULT;
 var
   I, J: Integer;
   View: TTBView;
@@ -1084,7 +1080,7 @@ begin
 end;
 
 function TTBItemViewerAccObject.accSelect(flagsSelect: Integer;
-  varChild: TTBVariant): HRESULT; stdcall;
+  varChild: TTBVariant): HRESULT;
 begin
   try
     if not Check(varChild, Result) then
@@ -1109,7 +1105,7 @@ begin
 end;
 
 function TTBItemViewerAccObject.get_accChild(varChild: TTBVariant;
-  out ppdispChild {$IFNDEF CLR}: IDispatch{$ENDIF}): HRESULT; stdcall;
+  out ppdispChild {$IFNDEF CLR}: IDispatch{$ENDIF}): HRESULT;
 var
   View: TTBView;
 begin
@@ -1138,7 +1134,7 @@ begin
   end;
 end;
 
-function TTBItemViewerAccObject.get_accChildCount(out pcountChildren: Integer): HRESULT; stdcall;
+function TTBItemViewerAccObject.get_accChildCount(out pcountChildren: Integer): HRESULT;
 begin
   try
     if FViewer = nil then begin
@@ -1157,7 +1153,7 @@ begin
 end;
 
 function TTBItemViewerAccObject.get_accDefaultAction(varChild: TTBVariant;
-  out pszDefaultAction: WideString): HRESULT; stdcall;
+  out pszDefaultAction: WideString): HRESULT;
 begin
   try
     if not Check(varChild, Result) then
@@ -1184,12 +1180,12 @@ begin
 end;
 
 function TTBItemViewerAccObject.get_accDescription(varChild: TTBVariant;
-  out pszDescription: WideString): HRESULT; stdcall;
+  out pszDescription: WideString): HRESULT;
 begin
   Result := S_FALSE;
 end;
 
-function TTBItemViewerAccObject.get_accFocus(out pvarID: TTBVariant): HRESULT; stdcall;
+function TTBItemViewerAccObject.get_accFocus(out pvarID: TTBVariant): HRESULT;
 begin
   try
     if FViewer = nil then begin
@@ -1209,20 +1205,20 @@ begin
 end;
 
 function TTBItemViewerAccObject.get_accHelp(varChild: TTBVariant;
-  out pszHelp: WideString): HRESULT; stdcall;
+  out pszHelp: WideString): HRESULT;
 begin
   Result := S_FALSE;
 end;
 
 function TTBItemViewerAccObject.get_accHelpTopic(out pszHelpFile: WideString;
-  varChild: TTBVariant; out pidTopic: Integer): HRESULT; stdcall;
+  varChild: TTBVariant; out pidTopic: Integer): HRESULT;
 begin
   pidTopic := 0;  { Delphi doesn't implicitly clear Integer 'out' parameters }
   Result := S_FALSE;
 end;
 
 function TTBItemViewerAccObject.get_accKeyboardShortcut(varChild: TTBVariant;
-  out pszKeyboardShortcut: WideString): HRESULT; stdcall;
+  out pszKeyboardShortcut: WideString): HRESULT;
 var
   C: Char;
 begin
@@ -1249,7 +1245,7 @@ begin
 end;
 
 function TTBItemViewerAccObject.get_accName(varChild: TTBVariant;
-  out pszName: WideString): HRESULT; stdcall;
+  out pszName: WideString): HRESULT;
 var
   C, S: String;
 begin
@@ -1269,7 +1265,7 @@ begin
   end;
 end;
 
-function TTBItemViewerAccObject.get_accParent(out ppdispParent {$IFNDEF CLR}: IDispatch{$ENDIF}): HRESULT; stdcall;
+function TTBItemViewerAccObject.get_accParent(out ppdispParent {$IFNDEF CLR}: IDispatch{$ENDIF}): HRESULT;
 begin
   try
     if Assigned(FViewer) then begin
@@ -1284,7 +1280,7 @@ begin
 end;
 
 function TTBItemViewerAccObject.get_accRole(varChild: TTBVariant;
-  out pvarRole: TTBVariant): HRESULT; stdcall;
+  out pvarRole: TTBVariant): HRESULT;
 begin
   try
     if not Check(varChild, Result) then
@@ -1296,13 +1292,13 @@ begin
   end;
 end;
 
-function TTBItemViewerAccObject.get_accSelection(out pvarChildren: TTBVariant): HRESULT; stdcall;
+function TTBItemViewerAccObject.get_accSelection(out pvarChildren: TTBVariant): HRESULT;
 begin
   Result := S_FALSE;
 end;
 
 function TTBItemViewerAccObject.get_accState(varChild: TTBVariant;
-  out pvarState: TTBVariant): HRESULT; stdcall;
+  out pvarState: TTBVariant): HRESULT;
 var
   Flags: Integer;
 begin
@@ -1340,7 +1336,7 @@ begin
 end;
 
 function TTBItemViewerAccObject.get_accValue(varChild: TTBVariant;
-  out pszValue: WideString): HRESULT; stdcall;
+  out pszValue: WideString): HRESULT;
 begin
   try
     if not Check(varChild, Result) then
@@ -1359,13 +1355,13 @@ begin
 end;
 
 function TTBItemViewerAccObject.put_accName(varChild: TTBVariant;
-  const pszName: WideString): HRESULT; stdcall;
+  const pszName: WideString): HRESULT;
 begin
   Result := S_FALSE;
 end;
 
 function TTBItemViewerAccObject.put_accValue(varChild: TTBVariant;
-  const pszValue: WideString): HRESULT; stdcall;
+  const pszValue: WideString): HRESULT;
 begin
   Result := S_FALSE;
 end;

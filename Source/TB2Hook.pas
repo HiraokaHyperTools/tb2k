@@ -92,12 +92,12 @@ begin
     CWPStruct := TCWPStruct(Marshal.PtrToStructure(IntPtr(LParam), TypeOf(TCWPStruct)));
     {$ENDIF}
     for J := Low(J) to High(J) do
-      if CWPStruct.Message = MsgMap[J] then begin
+      if CWPStruct^.Message = MsgMap[J] then begin
         for I := 0 to HookProcList.Count-1 do
           try
-            with THookProcData(HookProcList.List[I]) do
+            with THookProcData(HookProcList[I]) do
               if J in Codes then
-                Proc(J, CWPStruct.hwnd, CWPStruct.WParam, CWPStruct.LParam);
+                Proc(J, CWPStruct^.hwnd, CWPStruct^.WParam, CWPStruct^.LParam);
           except
           end;
         Break;
@@ -114,7 +114,7 @@ begin
   if Assigned(HookProcList) and (Code = HCBT_DESTROYWND) then
     for I := 0 to HookProcList.Count-1 do
       try
-        with THookProcData(HookProcList.List[I]) do
+        with THookProcData(HookProcList[I]) do
           if hpPreDestroy in Codes then
             Proc(hpPreDestroy, HWND(WParam), 0, 0);
       except
@@ -130,7 +130,7 @@ begin
   if Assigned(HookProcList) and (Code = HC_ACTION) then
     for I := 0 to HookProcList.Count-1 do
       try
-        with THookProcData(HookProcList.List[I]) do
+        with THookProcData(HookProcList[I]) do
           if hpGetMessage in Codes then
             Proc(hpGetMessage, 0, WParam, LParam);
       except
@@ -336,9 +336,9 @@ initialization
   { Work around Delphi.NET 2005 bug: declaring a constant array of procedural
     types crashes the compiler (see QC #10381; 2006 fixes it). So we instead
     declare HookProcs as a variable, and initialize the elements here. }
-  HookProcs[htCallWndProc] := CallWndProcHook;
-  HookProcs[htCBT] := CBTHook;
-  HookProcs[htGetMessage] := GetMessageHook;
+  HookProcs[htCallWndProc] := @CallWndProcHook;
+  HookProcs[htCBT] := @CBTHook;
+  HookProcs[htGetMessage] := @GetMessageHook;
 finalization
   UninstallHooks([Low(THookType)..High(THookType)], True);
 end.
